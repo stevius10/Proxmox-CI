@@ -1,3 +1,7 @@
-/setup/group_vars/secrets.yml
-
 /local/.build/
+
+
+/config/attributes/secrets.rb
+/default/roles/setup/files/id_rsa.pub
+
+# /setup/group_vars/secrets.yml

@@ -53,7 +53,7 @@ jobs:
           boot: ${{ needs.container-init.outputs.boot }}
           mounts: ${{ needs.container-init.outputs.mounts }}
           terminate: ${{ needs.container-init.outputs.terminate }}
-    if: ${{ github.ref == 'refs/heads/main' }}
+    if: ${{ github.ref == 'refs/heads/release' }}
 
   container-configuration:
     runs-on: [ "shell" ]
@@ -64,7 +64,7 @@ jobs:
       - name:
         run: ls -la && pwd
       - name: Run general setup
-        run: tar cz . | ssh -o StrictHostKeyChecking=no -i /root/.ssh/id_rsa config@${{ needs.container-init.outputs.ip }} 'mkdir -p /app/config && tar xz -C /app/config && sudo cinc-client --local-mode --chef-license accept -o recipe[default]'
+        run: tar cz . | ssh -o StrictHostKeyChecking=no -i /root/.ssh/id_rsa config@${{ needs.container-init.outputs.ip }} 'tar xz -C ~/config && sudo cinc-client --local-mode --chef-license accept --config-option cookbook_path=. -o config'
 
 #        run: |
 #          ansible-playbook -i "${{ needs.container-init.outputs.ip }},"  -e "target=${{ needs.container-init.outputs.ip }}" /dev/stdin <<END
