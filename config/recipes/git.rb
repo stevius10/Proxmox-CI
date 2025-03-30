@@ -1,4 +1,4 @@
-if !node['git']['git_version'] && node['git']['git_version'].to_s.empty?
+if !node['git']['version'] && node['git']['version'].to_s.empty?
   ruby_block 'fetch_latest_gitea_version' do
     block do
       require 'open-uri'
@@ -16,20 +16,20 @@ end
 
 remote_file "#{node['git']['install_dir']}/gitea" do
   source lazy {
-    ver = node['git']['git_version'] && !node['git']['git_version'].to_s.empty? ? node['git']['git_version'] : node.run_state['gitea_version']
+    ver = node['git']['version'] && !node['git']['version'].to_s.empty? ? node['git']['version'] : node.run_state['gitea_version']
     arch = (node['kernel']['machine'] =~ /arm64|aarch64/) ? 'arm64' : 'amd64'
     "https://github.com/go-gitea/gitea/releases/download/v#{ver}/gitea-#{ver}-linux-#{arch}"
   }
-  owner node['git']['app_user']
-  group node['git']['app_group']
+  owner node['git']['app']['user']
+  group node['git']['app']['group']
   mode '0755'
   action :create_if_missing
 end
 
 template "#{node['git']['install_dir']}/app.ini" do
   source 'git_app.ini.erb'
-  owner node['git']['app_user']
-  group node['git']['app_group']
+  owner node['git']['app']['user']
+  group node['git']['app']['group']
   mode '0644'
   action :create
 end

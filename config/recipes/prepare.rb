@@ -1,6 +1,6 @@
 [
-  "/home/#{node['git']['app_user']}",
-  "#{node['git']['git_home']}",
+  "/home/#{node['git']['app']['user']}",
+  "#{node['git']['home']}",
   "#{node['git']['install_dir']}",
   "#{node['git']['data_dir']}",
   "#{node['git']['data_dir']}/custom",
@@ -13,8 +13,8 @@
   "#{node['git']['workspace']}"
 ].each do |dir|
   directory dir do
-    owner node['git']['app_user']
-    group node['git']['app_group']
+    owner node['git']['app']['user']
+    group node['git']['app']['group']
     mode '0755'
     recursive true
     action :create
@@ -27,14 +27,14 @@ end
 
 execute 'generate_token' do
   command "openssl rand -hex 24 > #{node['git']['token_file']}"
-  user node['git']['app_user']
+  user node['git']['app']['user']
   creates node['git']['token_file']
   action :run
 end
 
 file node['git']['token_file'] do
-  owner node['git']['app_user']
-  group node['git']['app_group']
+  owner node['git']['app']['user']
+  group node['git']['app']['group']
   mode '0600'
   action :create
 end

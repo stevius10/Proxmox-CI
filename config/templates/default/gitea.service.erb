@@ -4,12 +4,12 @@ After=network.target
 
 [Service]
 Type=simple
-User=<%= node['git']['app_user'] %>
-Group=<%= node['git']['app_group'] %>
+User=<%= node['git']['app']['user'] %>
+Group=<%= node['git']['app']['group'] %>
 WorkingDirectory=<%= node['git']['data_dir'] %>
 ExecStart=<%= node['git']['install_dir'] %>/gitea web --config <%= node['git']['install_dir'] %>/app.ini
 Restart=on-failure
-Environment=USER=<%= node['git']['app_user'] %> HOME=/home/<%= node['git']['app_user'] %>
+Environment=USER=<%= node['git']['app']['user'] %> HOME=/home/<%= node['git']['app']['user'] %>
 
 [Install]
 WantedBy=multi-user.target

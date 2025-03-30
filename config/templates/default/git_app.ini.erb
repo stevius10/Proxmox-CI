@@ -1,20 +1,20 @@
 ; Gitea Application Configuration
 
 APP_NAME = Gitea
-RUN_USER = <%= node['git']['app_user'] %>
+RUN_USER = <%= node['git']['app']['user'] %>
 RUN_MODE = prod
 
 [database]
 DB_TYPE  = sqlite3
-PATH     = <%= node['git']['git_db_path'] %>
+PATH     = <%= node['git']['data_dir'] %>/gitea.db
 
 [repository]
 ROOT = <%= node['git']['data_dir'] %>/gitea-repositories
 
 [server]
-DOMAIN       = <%= node['git']['ip'] %>
-HTTP_PORT    = <%= node['git']['git_port'] %>
-ROOT_URL     = http://<%= node['git']['ip'] %>:<%= node['git']['git_port'] %>/
+DOMAIN       = <%= node['ip'] %>
+HTTP_PORT    = <%= node['git']['port'] %>
+ROOT_URL     = http://<%= node['ip'] %>:<%= node['git']['port'] %>/
 DISABLE_SSH  = false
 SSH_PORT     = 22
 START_SSH_SERVER = false

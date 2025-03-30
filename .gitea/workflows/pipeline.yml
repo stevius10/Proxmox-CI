@@ -1,6 +1,6 @@
 on:
   push:
-    branches: [ main, develop ]
+    branches: [ release, main, develop ]
 
 jobs:
 
@@ -61,10 +61,8 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
-      - name:
-        run: ls -la && pwd
-      - name: Run general setup
-        run: tar cz . | ssh -o StrictHostKeyChecking=no -i /root/.ssh/id_rsa config@${{ needs.container-init.outputs.ip }} 'tar xz -C ~/config && sudo cinc-client --local-mode --chef-license accept --config-option cookbook_path=. -o config'
+      - name: Configure container
+        run: tar cz . | ssh -o StrictHostKeyChecking=no -i /root/.ssh/id_rsa config@${{ needs.container-init.outputs.ip }} 'tar xz -C ~ && IP=${{ needs.container-init.outputs.ip }} && sudo cinc-client --local-mode --chef-license accept --config-option cookbook_path=. -o config'
 
 #        run: |
 #          ansible-playbook -i "${{ needs.container-init.outputs.ip }},"  -e "target=${{ needs.container-init.outputs.ip }}" /dev/stdin <<END

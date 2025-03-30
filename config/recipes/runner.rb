@@ -20,16 +20,16 @@ remote_file "#{node['runner']['install_dir']}/ace_runner" do
     arch = (node['kernel']['machine'] =~ /arm64|aarch64/) ? 'arm64' : 'amd64'
     "https://gitea.com/gitea/act_runner/releases/download/v#{ver}/act_runner-#{ver}-linux-#{arch}"
   }
-  owner node['git']['app_user']
-  group node['git']['app_group']
+  owner node['git']['app']['user']
+  group node['git']['app']['group']
   mode '0755'
   action :create_if_missing
 end
 
 template "#{node['runner']['install_dir']}/config.yaml" do
   source 'runner.config.yaml.erb'
-  owner node['git']['app_user']
-  group node['git']['app_group']
+  owner node['git']['app']['user']
+  group node['git']['app']['group']
   mode '0644'
   action :create
 end
@@ -44,18 +44,18 @@ template '/etc/systemd/system/runner.service' do
 end
 
 execute 'register_runner' do
-  command "#{node['runner']['install_dir']}/ace_runner register --instance http://localhost:#{node['git']['git_port']} --token $(cat #{node['git']['token_file']}) --no-interactive --config #{node['runner']['install_dir']}/config.yaml"
+  command "#{node['runner']['install_dir']}/ace_runner register --instance http://localhost:#{node['git']['port']} --token $(cat #{node['git']['token_file']}) --no-interactive --config #{node['runner']['install_dir']}/config.yaml"
   cwd node['runner']['install_dir']
-  user node['git']['app_user']
-  environment('HOME' => "/home/#{node['git']['app_user']}")
+  user node['git']['app']['user']
+  environment('HOME' => "/home/#{node['git']['app']['user']}")
   returns [0, 1]
   not_if { ::File.exist?("#{node['runner']['data_dir']}/.runner") }
   action :run
 end
 
 directory node['runner']['install_dir'] do
-  owner node['git']['app_user']
-  group node['git']['app_group']
+  owner node['git']['app']['user']
+  group node['git']['app']['group']
   mode '0755'
   recursive true
   action :create
