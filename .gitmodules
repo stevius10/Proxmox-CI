@@ -1,0 +1,3 @@
+[submodule "roles/container_default"]
+path = roles/container_default
+url = ../container-default.git

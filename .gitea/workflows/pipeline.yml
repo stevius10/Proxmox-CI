@@ -1,0 +1,82 @@
+on:
+  push:
+    branches: [ main, develop ]
+
+jobs:
+
+  container-init:
+    runs-on: [ "shell" ]
+    outputs:
+      ip: ${{ steps.config.outputs.ip }}
+      id: ${{ steps.config.outputs.id }}
+      hostname: ${{ steps.config.outputs.hostname }}
+      cores: ${{ steps.config.outputs.cores }}
+      memory: ${{ steps.config.outputs.memory }}
+      swap: ${{ steps.config.outputs.swap }}
+      rootfs: ${{ steps.config.outputs.rootfs }}
+      boot: ${{ steps.config.outputs.boot }}
+      mounts: ${{ steps.config.outputs.mounts }}
+      terminate: ${{ steps.config.outputs.terminate }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      - id: config
+        name: Set configuration
+        run: |
+          source config.env
+          echo "ip=192.168.178.$CONTAINER_ID" >> $GITEA_OUTPUT
+          echo "id=$CONTAINER_ID" >> $GITEA_OUTPUT
+          echo "hostname=$CONTAINER_HOSTNAME" >> $GITEA_OUTPUT
+          echo "cores=$CONTAINER_CORES" >> $GITEA_OUTPUT
+          echo "memory=$CONTAINER_MEMORY" >> $GITEA_OUTPUT
+          echo "swap=$CONTAINER_SWAP" >> $GITEA_OUTPUT
+          echo "rootfs=$CONTAINER_ROOTFS" >> $GITEA_OUTPUT
+          echo "boot=$CONTAINER_BOOT" >> $GITEA_OUTPUT
+          echo "mounts=$CONTAINER_MOUNTS" >> $GITEA_OUTPUT
+          echo "terminate=$CONTAINER_TERMINATE" >> $GITEA_OUTPUT
+
+  container-default:
+    runs-on: [ "shell" ]
+    needs: container-init
+    steps:
+      - id: init
+        uses: srv/container-default/.gitea/workflows@main
+        with:
+          ip: ${{ needs.container-init.outputs.ip }}
+          id: ${{ needs.container-init.outputs.id }}
+          hostname: ${{ needs.container-init.outputs.hostname }}
+          cores: ${{ needs.container-init.outputs.cores }}
+          memory: ${{ needs.container-init.outputs.memory }}
+          swap: ${{ needs.container-init.outputs.swap }}
+          rootfs: ${{ needs.container-init.outputs.rootfs }}
+          boot: ${{ needs.container-init.outputs.boot }}
+          mounts: ${{ needs.container-init.outputs.mounts }}
+          terminate: ${{ needs.container-init.outputs.terminate }}
+    if: ${{ github.ref == 'refs/heads/main' }}
+
+  container-configuration:
+    runs-on: [ "shell" ]
+    needs: [container-init]
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      - name:
+        run: ls -la && pwd
+      - name: Run general setup
+        run: tar cz . | ssh -o StrictHostKeyChecking=no -i /root/.ssh/id_rsa config@${{ needs.container-init.outputs.ip }} 'mkdir -p /app/config && tar xz -C /app/config && sudo cinc-client --local-mode --chef-license accept -o recipe[default]'
+
+#        run: |
+#          ansible-playbook -i "${{ needs.container-init.outputs.ip }},"  -e "target=${{ needs.container-init.outputs.ip }}" /dev/stdin <<END
+#          ---
+#          - hosts: "{{ target | default('undef_host') }}"
+#            become: yes
+#            gather_facts: no
+#            roles:
+#              - setup
+#            vars:
+#              ansible_user: "config"
+#              ansible_ssh_private_key_file: /root/.ssh/id_rsa
+#            vars_files:
+#              - "$(pwd)/setup/group_vars/all.yml"
+#          END

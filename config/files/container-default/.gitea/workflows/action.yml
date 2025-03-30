@@ -1,0 +1,49 @@
+inputs:
+  ip:
+    required: true
+    type: string
+  id:
+    required: true
+    type: number
+  hostname:
+    required: true
+    type: string
+  cores:
+    required: true
+    type: number
+  memory:
+    required: true
+    type: number
+  swap:
+    required: true
+    type: number
+  rootfs:
+    required: true
+    type: string
+  boot:
+    required: true
+    type: string
+  mounts:
+    required: true
+    type: string
+  terminate:
+    required: true
+    type: string
+
+runs:
+  using: "composite"
+  steps:
+
+    - uses: actions/checkout@v4
+      with:
+        repository: srv/container-default
+        ref: 'main'
+
+    - run: ansible-playbook default.yml -e "ip=${{ inputs.ip }}" -e "id=${{ inputs.id }}" -e "hostname=${{ inputs.hostname }}" -e "cores=${{ inputs.cores }}" -e "memory=${{ inputs.memory }}" -e "swap=${{ inputs.swap }}" -e "rootfs=${{ inputs.rootfs }}" -e "boot=${{ inputs.boot }}" -e "mounts=${{ inputs.mounts }}" -e "terminate=${{ inputs.terminate }}" -e "PROXMOX_HOST=${{ vars.PM_HOST }}" -e "PROXMOX_USER=${{ vars.PM_USER }}" -e "PROXMOX_TOKEN_ID=${{ vars.PM_API_TOKEN_ID }}" -e "PROXMOX_TOKEN_SECRET=${{ vars.PM_API_TOKEN_SECRET }}" -vvv
+      env:
+        # CI_COMMIT_BRANCH: ${{ CI_COMMIT_BRANCH }}
+        PROXMOX_HOST: ${{ vars.PM_HOST }}
+        PROXMOX_URL: "http://${{ vars.PM_HOST }}:8006"
+        PROXMOX_USER: ${{ vars.PM_USER }}
+        PROXMOX_TOKEN_ID: ${{ vars.PM_API_TOKEN_ID }}
+        PROXMOX_TOKEN_SECRET: ${{ vars.PM_API_TOKEN_SECRET }}

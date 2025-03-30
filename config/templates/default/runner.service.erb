@@ -1,0 +1,14 @@
+[Unit]
+Description=Gitea Actions Runner
+After=network.target
+
+[Service]
+Type=simple
+User=<%= node['git']['app_user'] %>
+Group=<%= node['git']['app_group'] %>
+WorkingDirectory=<%= node['runner']['data_dir'] %>
+ExecStart=<%= node['runner']['install_dir'] %>/ace_runner daemon --config <%= node['runner']['install_dir'] %>/config.yaml
+Restart=on-failure
+
+[Install]
+WantedBy=multi-user.target

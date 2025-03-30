@@ -1,0 +1,15 @@
+default_packages:
+  - vim
+  - wget
+  - curl
+  - sudo
+  - net-tools
+
+users:
+  - { name: "app", create_home: false }
+  - { name: "config", groups: ["root", "sudo"], create_home: true }
+  - { name: "user", shell: "/bin/bash", groups: ["root", "sudo"], create_home: true }
+
+ssh_users:
+  - config
+  - user
