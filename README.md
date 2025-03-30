@@ -4,6 +4,8 @@
 
 Proxmox CI is an automation framework designed for provisioning and managing Linux Containers (LXC) in Proxmox environments. It integrates infrastructure provisioning with configuration management to ensure consistent, reproducible, and idempotent container deployments.
 
+![Proxmox CI Deployment](docs/img/pci-deployment.png)
+
 ## Components
 
 - **Infrastructure Provisioning:**  
