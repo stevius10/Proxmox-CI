@@ -24,17 +24,3 @@ end
 package %w(git acl python3-pip python3-dev build-essential libssl-dev lsb-release) do
   action :install
 end
-
-execute 'generate_token' do
-  command "openssl rand -hex 24 > #{node['git']['token_file']}"
-  user node['git']['app']['user']
-  creates node['git']['token_file']
-  action :run
-end
-
-file node['git']['token_file'] do
-  owner node['git']['app']['user']
-  group node['git']['app']['group']
-  mode '0600'
-  action :create
-end

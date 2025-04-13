@@ -43,8 +43,23 @@ template '/etc/systemd/system/runner.service' do
   notifies :run, 'execute[daemon_reload]', :immediately
 end
 
+ruby_block 'generate_runner_token' do
+  block do
+    cmd = Mixlib::ShellOut.new("#{node['git']['install_dir']}/gitea actions --config #{node['git']['install_dir']}/app.ini generate-runner-token", user: node['git']['app']['user'], environment: { 'HOME' => "/home/#{node['git']['app']['user']}" })
+    cmd.run_command
+    cmd.error!
+    node.run_state['runner_token'] = cmd.stdout.strip
+  end
+end
+
 execute 'register_runner' do
-  command "#{node['runner']['install_dir']}/ace_runner register --instance http://localhost:#{node['git']['port']} --token $(cat #{node['git']['token_file']}) --no-interactive --config #{node['runner']['install_dir']}/config.yaml"
+  command lazy {
+    "#{node['runner']['install_dir']}/ace_runner register " \
+      "--instance http://localhost:#{node['git']['port']} " \
+      "--token #{node.run_state['runner_token']} " \
+      "--no-interactive " \
+      "--config #{node['runner']['install_dir']}/config.yaml"
+  }
   cwd node['runner']['install_dir']
   user node['git']['app']['user']
   environment('HOME' => "/home/#{node['git']['app']['user']}")

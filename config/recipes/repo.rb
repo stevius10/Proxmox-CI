@@ -3,6 +3,25 @@ node['git']['repositories'].each do |repo_name|
   src = File.expand_path(repo_name, Dir.pwd)
   dst = File.join(node['git']['workspace'], repo_id)
 
+  ruby_block "create_repo_#{repo_id}" do
+    block do
+      require 'net/http'
+      require 'uri'
+      api = URI("#{node['git']['endpoint']}/admin/users/#{node['git']['repo']['org']}/repos")
+      http = Net::HTTP.new(api.host, api.port)
+      req = Net::HTTP::Post.new(api.request_uri)
+      req.basic_auth(node['user'], node['password'])
+      req['Content-Type'] = 'application/json'
+      req.body = { name: repo_id, private: false, auto_init: false, default_branch: node['git']['repo']['branch'] }.to_json
+      response = http.request(req)
+      code = response.code.to_i
+      if code != 201 && code != 409
+        raise "Fehler beim Erstellen des Repos #{repo_id} (HTTP #{code}): #{res.body}"
+      end
+    end
+    action :run
+  end
+
   directory ::File.dirname(dst) do
     recursive true
     action :create

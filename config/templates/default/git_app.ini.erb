@@ -15,9 +15,8 @@ ROOT = <%= node['git']['data_dir'] %>/gitea-repositories
 DOMAIN       = <%= node['ip'] %>
 HTTP_PORT    = <%= node['git']['port'] %>
 ROOT_URL     = http://<%= node['ip'] %>:<%= node['git']['port'] %>/
-DISABLE_SSH  = false
 SSH_PORT     = 22
-START_SSH_SERVER = false
+START_SSH_SERVER = true
 
 [security]
 INSTALL_LOCK = true

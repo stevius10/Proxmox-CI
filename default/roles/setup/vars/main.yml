@@ -4,6 +4,7 @@ default_packages:
   - curl
   - sudo
   - net-tools
+  - procps
 
 users:
   - { name: "app", create_home: false }

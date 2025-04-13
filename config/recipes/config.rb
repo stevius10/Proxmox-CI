@@ -81,7 +81,7 @@ file "/home/#{node['git']['app']['user']}/.ssh/config" do
   content <<-CONF.gsub(/^\s+/, '')
     Host #{node['ip']}
       HostName #{node['ip']}
-      User #{node['user']}
+      User #{node['git']['app']['user']}
       IdentityFile /home/#{node['git']['app']['user']}/.ssh/id_rsa
       StrictHostKeyChecking no
   CONF
@@ -119,7 +119,7 @@ ruby_block 'create_organization' do
     req = Net::HTTP::Post.new(api.request_uri)
     req.basic_auth(node['user'], node['password'])
     req['Content-Type'] = 'application/json'
-    req.body = { username: node['git']['cfg_git_org'] }.to_json
+    req.body = { username: node['git']['repo']['org'] }.to_json
     response = http.request(req)
     code = response.code.to_i
     if code != 201 && code != 422
@@ -134,7 +134,7 @@ ruby_block 'set_org_variables_and_secrets' do
     require 'net/http'
     require 'uri'
     require 'json'
-    org = node['git']['cfg_git_org']
+    org = node['git']['repo']['org']
     api_base = "#{node['git']['endpoint']}/orgs/#{org}/actions"
     creds = [node['user'], node['password']]
     env_vars = {
@@ -143,6 +143,7 @@ ruby_block 'set_org_variables_and_secrets' do
     }
     env_vars.each do |key, value|
       uri_var = URI("#{api_base}/variables/#{key}")
+      puts uri_var
       http = Net::HTTP.new(uri_var.host, uri_var.port)
       req_var = Net::HTTP::Post.new(uri_var.request_uri)
       req_var.basic_auth(*creds)

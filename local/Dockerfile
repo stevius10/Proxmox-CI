@@ -6,10 +6,13 @@ ENV LANGUAGE=en_US.UTF-8
 ENV PYTHONIOENCODING=utf8
 ARG DEBIAN_FRONTEND=noninteractive
 
+ENV IP=127.0.0.1
+# ENV IP=172.17.0.1
+
 STOPSIGNAL SIGRTMIN+3
 ENV container=docker
 
-RUN apt update -y && apt install -y sudo make curl jq git systemd vim wget net-tools && apt clean all && \
+RUN apt update -y && apt install -y sudo make curl jq git systemd vim wget net-tools procps && apt clean all && \
     rm -rf /var/cache/dnf/* /tmp/* /var/tmp/*
 
 RUN rm -rf /lib/systemd/system/multi-user.target.wants/* ; \
