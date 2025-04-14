@@ -6,7 +6,7 @@ After=network.target
 Type=simple
 User=<%= node['git']['app']['user'] %>
 Group=<%= node['git']['app']['group'] %>
-WorkingDirectory=<%= node['runner']['data_dir'] %>
+WorkingDirectory=<%= node['runner']['install_dir'] %>
 ExecStart=<%= node['runner']['install_dir'] %>/ace_runner daemon --config <%= node['runner']['install_dir'] %>/config.yaml
 Restart=on-failure
 

@@ -9,7 +9,6 @@
   "#{node['git']['data_dir']}/log",
   "#{node['git']['data_dir']}/custom/conf",
   "#{node['runner']['install_dir']}",
-  "#{node['runner']['data_dir']}",
   "#{node['git']['workspace']}"
 ].each do |dir|
   directory dir do

@@ -26,14 +26,6 @@ remote_file "#{node['runner']['install_dir']}/ace_runner" do
   action :create_if_missing
 end
 
-template "#{node['runner']['install_dir']}/config.yaml" do
-  source 'runner.config.yaml.erb'
-  owner node['git']['app']['user']
-  group node['git']['app']['group']
-  mode '0644'
-  action :create
-end
-
 template '/etc/systemd/system/runner.service' do
   source 'runner.service.erb'
   owner 'root'
@@ -43,29 +35,12 @@ template '/etc/systemd/system/runner.service' do
   notifies :run, 'execute[daemon_reload]', :immediately
 end
 
-ruby_block 'generate_runner_token' do
-  block do
-    cmd = Mixlib::ShellOut.new("#{node['git']['install_dir']}/gitea actions --config #{node['git']['install_dir']}/app.ini generate-runner-token", user: node['git']['app']['user'], environment: { 'HOME' => "/home/#{node['git']['app']['user']}" })
-    cmd.run_command
-    cmd.error!
-    node.run_state['runner_token'] = cmd.stdout.strip
-  end
-end
-
-execute 'register_runner' do
-  command lazy {
-    "#{node['runner']['install_dir']}/ace_runner register " \
-      "--instance http://localhost:#{node['git']['port']} " \
-      "--token #{node.run_state['runner_token']} " \
-      "--no-interactive " \
-      "--config #{node['runner']['install_dir']}/config.yaml"
-  }
-  cwd node['runner']['install_dir']
-  user node['git']['app']['user']
-  environment('HOME' => "/home/#{node['git']['app']['user']}")
-  returns [0, 1]
-  not_if { ::File.exist?("#{node['runner']['data_dir']}/.runner") }
-  action :run
+template "#{node['runner']['install_dir']}/config.yaml" do
+  source 'runner.config.yaml.erb'
+  owner node['git']['app']['user']
+  group node['git']['app']['group']
+  mode '0644'
+  action :create
 end
 
 directory node['runner']['install_dir'] do
@@ -74,6 +49,59 @@ directory node['runner']['install_dir'] do
   mode '0755'
   recursive true
   action :create
+end
+
+ruby_block 'generate_and_register_runner' do
+  block do
+    runner_marker = "#{node['runner']['install_dir']}/.runner"
+
+    unless ::File.exist?(runner_marker)
+      require 'net/http'
+
+      uri = URI("http://localhost:#{node['git']['port']}")
+      max_retries = 10
+      delay = 3
+      connected = false
+
+      max_retries.times do |attempt|
+        begin
+          res = Net::HTTP.get_response(uri)
+          if res.is_a?(Net::HTTPSuccess) || res.is_a?(Net::HTTPRedirection)
+            connected = true
+            break
+          end
+        rescue => e
+          Chef::Log.warn("Gitea not ready yet (attempt #{attempt + 1}/#{max_retries}): #{e}")
+        end
+        sleep delay
+      end
+
+      raise "Gitea is not responding after #{max_retries * delay} seconds" unless connected
+
+      token_cmd = Mixlib::ShellOut.new(
+        "#{node['git']['install_dir']}/gitea actions --config #{node['git']['install_dir']}/app.ini generate-runner-token",
+        user: node['git']['app']['user'],
+        environment: { 'HOME' => "/home/#{node['git']['app']['user']}" }
+      )
+      token_cmd.run_command
+      token_cmd.error!
+      token = token_cmd.stdout.strip
+
+      register_cmd = Mixlib::ShellOut.new(
+        "#{node['runner']['install_dir']}/ace_runner register " \
+          "--instance http://localhost:#{node['git']['port']} " \
+          "--token #{token} " \
+          "--no-interactive " \
+          "--labels shell " \
+          "--config #{node['runner']['install_dir']}/config.yaml",
+        cwd: node['runner']['install_dir'],
+        user: node['git']['app']['user'],
+        environment: { 'HOME' => "/home/#{node['git']['app']['user']}" }
+      )
+      register_cmd.run_command
+      register_cmd.error!
+    end
+  end
 end
 
 service 'runner' do

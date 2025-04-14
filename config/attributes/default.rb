@@ -17,7 +17,6 @@ default['git']['repo']['org']       = 'srv'
 default['git']['repo']['ssh']       = "#{node['ip']}:/#{node['git']['repo']['org']}"
 
 default['runner']['install_dir']    = '/app/runner'
-default['runner']['data_dir']       = '/app/runner/data'
 default['runner']['labels']         = 'shell'
 
 default['git']['repositories']      = [
