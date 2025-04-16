@@ -1,7 +1,7 @@
 ruby_block 'wait_for_gitea' do
   block do
     require 'socket'
-    port = node['git']['port']
+    port = node['git']['port']['http']
     begin
       Timeout.timeout(15) do
         loop do
@@ -66,7 +66,7 @@ ruby_block 'add_ssh_key_via_api' do
     response = http.request(req)
     code = response.code.to_i
     if code != 201 && code != 422
-      raise "Fehler beim Setzen des SSH-Schlüssels (HTTP #{code}): #{response.body}"
+      raise "#{code}: #{response.body}"
     end
   end
   action :run
@@ -78,7 +78,7 @@ execute 'fix_app_home_permissions' do
 end
 
 file "/home/#{node['git']['app']['user']}/.ssh/config" do
-  content <<-CONF.gsub(/^\s+/, '')
+  content <<~CONF
     Host #{node['ip']}
       HostName #{node['ip']}
       User #{node['git']['app']['user']}

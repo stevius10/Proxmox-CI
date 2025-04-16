@@ -56,7 +56,7 @@ if [[ -z "$CONTAINER_ID" ]]; then
     echo "[$PROJECT_NAME:Container] Start $DOCKER_CONTAINER_NAME"
     CONTAINER_ID=$(docker run -d --privileged \
         --tmpfs /tmp --tmpfs /run \
-        -p 8080:8080 -p 80:80 -p 22:22 -w "/$PROJECT_NAME" \
+        -p 8080:8080 -p 80:80 -p 2222:2222 -w "/$PROJECT_NAME" \
         -v "$PROJECT_DIR:/$PROJECT_NAME" \
         -v /sys/fs/cgroup:/sys/fs/cgroup:rw --cgroupns=host \
         --name "$DOCKER_CONTAINER_NAME" \
@@ -68,6 +68,6 @@ if [[ -z "$CONTAINER_ID" ]]; then
 fi
 
 echo "[$PROJECT_NAME:Ansible] Apply role $ROLE_NAME"
-docker exec "$CONTAINER_ID" bash -c "cinc-client --local-mode --config-option cookbook_path=. --chef-license accept -o config"
+docker exec "$CONTAINER_ID" bash -c "cinc-client -l info --local-mode --config-option cookbook_path=. --chef-license accept -o config"
 # ANSIBLE_ROLES_PATH="/$SETUP_DIR" -e "architecture=arm64" "$CONTAINER_ID" ansible-playbook -e 'target=127.0.0.1' -c local ".docker/.build/${ROLE_NAME}.yml"
 

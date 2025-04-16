@@ -149,4 +149,4 @@
   tasks:
     - name: "Apply default configuration"
       ansible.builtin.include_role:
-        name: setup
+        name: base

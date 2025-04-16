@@ -31,6 +31,7 @@ node['git']['repositories'].each do |repo_name|
     block do
       require 'fileutils'
       source_root = ENV['PWD']
+      Chef::Log.info("Copying repo: id=#{repo_id}, name=#{repo_name}, env=#{source_root}")
       src = File.expand_path(repo_name, source_root)
       dst = File.join(node['git']['workspace'], File.basename(repo_name))
       raise "Not found: #{src}" unless ::Dir.exist?(src)
@@ -59,7 +60,7 @@ node['git']['repositories'].each do |repo_name|
     owner node['git']['app']['user']
     group node['git']['app']['group']
     mode '0644'
-    variables(repo: repo_id)
+    variables(repo: repo_id, git_user: node['git']['app']['user'])
     action :create
   end
 
@@ -93,6 +94,7 @@ node['git']['repositories'].each do |repo_name|
     command "git commit -m 'Update repository state'"
     cwd dst
     user node['git']['app']['user']
+    environment 'HOME' => "/home/#{node['git']['app']['user']}"
     only_if { node.run_state["#{repo_id}_dirty"] }
     action :run
   end

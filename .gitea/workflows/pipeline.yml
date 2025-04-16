@@ -15,7 +15,7 @@ jobs:
       swap: ${{ steps.config.outputs.swap }}
       rootfs: ${{ steps.config.outputs.rootfs }}
       boot: ${{ steps.config.outputs.boot }}
-      mounts: ${{ steps.config.outputs.mounts }}
+      shared: ${{ steps.config.outputs.shared }}
       terminate: ${{ steps.config.outputs.terminate }}
 
     steps:
@@ -25,23 +25,23 @@ jobs:
         name: Set configuration
         run: |
           source config.env
-          echo "ip=192.168.178.$CONTAINER_ID" >> $GITEA_OUTPUT
-          echo "id=$CONTAINER_ID" >> $GITEA_OUTPUT
-          echo "hostname=$CONTAINER_HOSTNAME" >> $GITEA_OUTPUT
-          echo "cores=$CONTAINER_CORES" >> $GITEA_OUTPUT
-          echo "memory=$CONTAINER_MEMORY" >> $GITEA_OUTPUT
-          echo "swap=$CONTAINER_SWAP" >> $GITEA_OUTPUT
-          echo "rootfs=$CONTAINER_ROOTFS" >> $GITEA_OUTPUT
-          echo "boot=$CONTAINER_BOOT" >> $GITEA_OUTPUT
-          echo "mounts=$CONTAINER_MOUNTS" >> $GITEA_OUTPUT
-          echo "terminate=$CONTAINER_TERMINATE" >> $GITEA_OUTPUT
+          echo "ip=192.168.178.$ID" >> $GITEA_OUTPUT
+          echo "id=$ID" >> $GITEA_OUTPUT
+          echo "hostname=$HOSTNAME" >> $GITEA_OUTPUT
+          echo "cores=$CORES" >> $GITEA_OUTPUT
+          echo "memory=$MEMORY" >> $GITEA_OUTPUT
+          echo "swap=$SWAP" >> $GITEA_OUTPUT
+          echo "rootfs=$ROOTFS" >> $GITEA_OUTPUT
+          echo "boot=$BOOT" >> $GITEA_OUTPUT
+          echo "shared=$SHARED" >> $GITEA_OUTPUT
+          echo "terminate=$TERMINATE" >> $GITEA_OUTPUT
 
-  container-default:
+  container-base:
     runs-on: [ "shell" ]
     needs: container-init
     steps:
       - id: init
-        uses: srv/container-default/.gitea/workflows@main
+        uses: srv/base/.gitea/workflows@main
         with:
           ip: ${{ needs.container-init.outputs.ip }}
           id: ${{ needs.container-init.outputs.id }}
@@ -51,7 +51,7 @@ jobs:
           swap: ${{ needs.container-init.outputs.swap }}
           rootfs: ${{ needs.container-init.outputs.rootfs }}
           boot: ${{ needs.container-init.outputs.boot }}
-          mounts: ${{ needs.container-init.outputs.mounts }}
+          shared: ${{ needs.container-init.outputs.shared }}
           terminate: ${{ needs.container-init.outputs.terminate }}
     if: ${{ github.ref == 'refs/heads/release' }}
 
@@ -62,7 +62,7 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
       - name: Configure container
-        run: tar cz . | ssh -o StrictHostKeyChecking=no -i /root/.ssh/id_rsa config@${{ needs.container-init.outputs.ip }} 'tar xz -C ~ && IP=${{ needs.container-init.outputs.ip }} && sudo cinc-client --local-mode --chef-license accept --config-option cookbook_path=. -o config'
+        run: tar cz . | ssh -o StrictHostKeyChecking=no -i /root/.ssh/id_rsa config@${{ needs.container-init.outputs.ip }} 'tar xz -C ~ && sudo env IP=${{ needs.container-init.outputs.ip }} PWD=$(pwd) cinc-client -l info --local-mode --chef-license accept --config-option cookbook_path=. -o config'
 
 #        run: |
 #          ansible-playbook -i "${{ needs.container-init.outputs.ip }},"  -e "target=${{ needs.container-init.outputs.ip }}" /dev/stdin <<END

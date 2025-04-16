@@ -50,6 +50,6 @@ end
 
 service 'gitea' do
   action [:enable, :start]
-  subscribes :restart, 'template[git_app.ini.erb]', :delayed
-  subscribes :restart, 'remote_file[#{node["git"]["install_dir"]}/gitea]', :delayed
+  subscribes :restart, "template[#{node['git']['install_dir']}/app.ini]", :delayed
+  subscribes :restart, "remote_file[#{node['git']['install_dir']}/gitea]", :delayed
 end

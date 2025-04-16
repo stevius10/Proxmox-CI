@@ -58,7 +58,7 @@ ruby_block 'generate_and_register_runner' do
     unless ::File.exist?(runner_marker)
       require 'net/http'
 
-      uri = URI("http://localhost:#{node['git']['port']}")
+      uri = URI("http://localhost:#{node['git']['port']['http']}")
       max_retries = 10
       delay = 3
       connected = false
@@ -89,7 +89,7 @@ ruby_block 'generate_and_register_runner' do
 
       register_cmd = Mixlib::ShellOut.new(
         "#{node['runner']['install_dir']}/ace_runner register " \
-          "--instance http://localhost:#{node['git']['port']} " \
+          "--instance http://localhost:#{node['git']['port']['http']} " \
           "--token #{token} " \
           "--no-interactive " \
           "--labels shell " \

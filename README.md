@@ -1,18 +1,56 @@
-# Proxmox CI: Self-Configuring CI Environment for LXC Container Automation
+# Proxmox CI: CI Environment for LXC Container Automation
 
 ## Overview
 
-Proxmox CI is an automation framework designed for provisioning and managing Linux Containers (LXC) in Proxmox environments. It integrates infrastructure provisioning with configuration management to ensure consistent, reproducible, and idempotent container deployments.
+Proxmox CI is an automated GitOps system for provisioning and orchestrating Linux containers (LXC) in Proxmox environments. 
 
-![Proxmox CI Deployment](docs/img/pci-deployment.png)
+It employs modular orchestration layers to achieve a recursive, self-deploying system. The architecture separates base infrastructure, system configuration, and runtime execution.
 
-## Components
+![Proxmox CI Deployment](docs/redeploy.png)
 
-- **Infrastructure Provisioning:**  
-  Automates the creation and lifecycle management of LXC containers within Proxmox, ensuring uniformity in infrastructure definitions and deployment.
+## Core Components
 
-- **Configuration Management:**  
-  Applies structured configuration management methods to consistently configure container environments, promoting reproducibility and standardization.
+### Layered Pipeline Structure
 
-- **Idempotent Deployment Process:**  
-  Ensures repeated executions consistently achieve the same system state. By assigning fixed container identifiers and deploying uniform repository structures, the system autonomously builds, validates, and restores its configurations, enhancing operational reliability.
+The layered pipeline manages desired state configurations:
+
+- **container-init:** Environment and parameter initialization.
+- **container-default:** Base container provisioning.
+- **container-configuration:** Service-specific configuration.
+
+## Self-Referential Deployment
+
+The system bootstraps itself recursively:
+
+1. The initial pipeline creates a Proxmox container with an integrated Git platform.
+2. The system imports its own codebase for self-management.
+3. It establishes the CI structure within the deployed Git service.
+4. Configuration references itself, enabling continuous deployment on changes.
+
+This closed deployment loop ensures all changes propagate automatically through the self-hosted infrastructure.
+
+## Technical Implementation
+
+- **Container Provisioning:** Managed via Proxmox API using Ansible modules.
+- **Configuration Management:** Dual orchestration with Ansible for provisioning and Chef (Cinc) for application configuration.
+- **Repository Management:** Automated via API calls.
+- **Local Development:** Docker-based environment for local container testing.
+
+## Project Structure
+
+```
+.
+├── .gitea/workflows/       # CI pipeline definitions
+├── config/                 # Service-specific configuration
+│   ├── attributes/         # Chef attributes 
+│   ├── recipes/            # Chef implementation recipes
+│   └── templates/          # Configuration templates
+├── default/                # Base container configuration
+│   ├── .gitea/workflows/   # Default container actions
+│   ├── roles/setup/        # Ansible roles for base setup
+│   └── default.yml         # Ansible playbook
+├── local/                  # Development environment
+│   ├── Dockerfile          # Container definition
+│   └── run.sh              # Development workflow script
+└── config.env              # Environment configuration
+```

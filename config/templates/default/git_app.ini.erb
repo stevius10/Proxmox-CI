@@ -4,26 +4,45 @@ APP_NAME = Gitea
 RUN_USER = <%= node['git']['app']['user'] %>
 RUN_MODE = prod
 
+[server]
+DOMAIN       = <%= node['ip'] %>
+HTTP_PORT    = <%= node['git']['port']['http'] %>
+ROOT_URL     = http://<%= node['ip'] %>:<%= node['git']['port']['http'] %>/
+SSH_PORT     = 2222
+START_SSH_SERVER = true
+
 [database]
 DB_TYPE  = sqlite3
 PATH     = <%= node['git']['data_dir'] %>/gitea.db
-
-[repository]
-ROOT = <%= node['git']['data_dir'] %>/gitea-repositories
-
-[server]
-DOMAIN       = <%= node['ip'] %>
-HTTP_PORT    = <%= node['git']['port'] %>
-ROOT_URL     = http://<%= node['ip'] %>:<%= node['git']['port'] %>/
-SSH_PORT     = 22
-START_SSH_SERVER = true
 
 [security]
 INSTALL_LOCK = true
 SECRET_KEY   = <%= (0...32).map { ('a'..'z').to_a[rand(26)] }.join %>
 
-[service]
-ENABLE_REGISTERATION_CAPTCHA = false
-
 [actions]
 ENABLED = true
+LOG_RETENTION_DAYS = 7
+
+[repository]
+ROOT = <%= node['git']['data_dir'] %>/gitea-repositories
+REPOSITORY_AVATAR_FALLBACK = none
+DISABLE_STARS = true
+DISABLE_MIGRATIONS = true
+
+[service]
+ENABLE_REGISTERATION_CAPTCHA = false
+DISABLE_GRAVATAR = true
+ENABLE_FEDERATED_AVATAR = false
+SHOW_USER_EMAIL = false
+
+[avatar]
+DISABLE_AVATAR = true
+
+[git]
+MAX_GIT_DIFF_LINES = 500
+MAX_GIT_DIFF_FILES = 50
+GC_ARGS = --aggressive
+
+[log]
+MODE = console
+LEVEL = Warn
