@@ -19,9 +19,6 @@ default['git']['repo']['ssh']       = "#{node['ip']}:#{node['git']['port']['ssh'
 default['runner']['install_dir']    = '/app/runner'
 default['runner']['labels']         = 'shell'
 
-default['git']['repositories']      = [
-    './base',
-    './config'
-]
+default['git']['repositories']      = [ "./base", "./" ]
 
 load(File.expand_path('secrets.rb', __FILE__)) if File.exist?(File.expand_path('secrets.rb', __FILE__))

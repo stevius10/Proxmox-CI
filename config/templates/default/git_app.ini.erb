@@ -17,7 +17,6 @@ PATH     = <%= node['git']['data_dir'] %>/gitea.db
 
 [security]
 INSTALL_LOCK = true
-SECRET_KEY   = <%= (0...32).map { ('a'..'z').to_a[rand(26)] }.join %>
 
 [actions]
 ENABLED = true

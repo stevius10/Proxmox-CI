@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -eo pipefail
 
-PROJECT_NAME="container-git"
+PROJECT_NAME="${PWD##*/}"
 
 # Paths 
 PROJECT_DIR="$(pwd)"
@@ -68,6 +68,6 @@ if [[ -z "$CONTAINER_ID" ]]; then
 fi
 
 echo "[$PROJECT_NAME:Ansible] Apply role $ROLE_NAME"
-docker exec "$CONTAINER_ID" bash -c "cinc-client -l info --local-mode --config-option cookbook_path=. --chef-license accept -o config"
+docker exec "$CONTAINER_ID" bash -c "mkdir -p config/.gitea/workflows && cp .gitea/workflows/pipeline.yml config/.gitea/workflows/ && cinc-client -l info --local-mode --config-option cookbook_path=. --chef-license accept -o config"
 # ANSIBLE_ROLES_PATH="/$SETUP_DIR" -e "architecture=arm64" "$CONTAINER_ID" ansible-playbook -e 'target=127.0.0.1' -c local ".docker/.build/${ROLE_NAME}.yml"
 

@@ -20,6 +20,6 @@
   end
 end
 
-package %w(git acl python3-pip python3-dev build-essential libssl-dev lsb-release) do
+package %w(git acl python3-pip python3-dev build-essential libssl-dev lsb-release nodejs npm) do
   action :install
 end

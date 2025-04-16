@@ -4,7 +4,7 @@ on:
 
 jobs:
 
-  container-init:
+  init:
     runs-on: [ "shell" ]
     outputs:
       ip: ${{ steps.config.outputs.ip }}
@@ -36,36 +36,36 @@ jobs:
           echo "shared=$SHARED" >> $GITEA_OUTPUT
           echo "terminate=$TERMINATE" >> $GITEA_OUTPUT
 
-  container-base:
+  base:
     runs-on: [ "shell" ]
-    needs: container-init
+    needs: init
     steps:
       - id: init
         uses: srv/base/.gitea/workflows@main
         with:
-          ip: ${{ needs.container-init.outputs.ip }}
-          id: ${{ needs.container-init.outputs.id }}
-          hostname: ${{ needs.container-init.outputs.hostname }}
-          cores: ${{ needs.container-init.outputs.cores }}
-          memory: ${{ needs.container-init.outputs.memory }}
-          swap: ${{ needs.container-init.outputs.swap }}
-          rootfs: ${{ needs.container-init.outputs.rootfs }}
-          boot: ${{ needs.container-init.outputs.boot }}
-          shared: ${{ needs.container-init.outputs.shared }}
-          terminate: ${{ needs.container-init.outputs.terminate }}
+          ip: ${{ needs.init.outputs.ip }}
+          id: ${{ needs.init.outputs.id }}
+          hostname: ${{ needs.init.outputs.hostname }}
+          cores: ${{ needs.init.outputs.cores }}
+          memory: ${{ needs.init.outputs.memory }}
+          swap: ${{ needs.init.outputs.swap }}
+          rootfs: ${{ needs.init.outputs.rootfs }}
+          boot: ${{ needs.init.outputs.boot }}
+          shared: ${{ needs.init.outputs.shared }}
+          terminate: ${{ needs.init.outputs.terminate }}
     if: ${{ github.ref == 'refs/heads/release' }}
 
-  container-configuration:
+  config:
     runs-on: [ "shell" ]
-    needs: [container-init]
+    needs: [init]
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
       - name: Configure container
-        run: tar cz . | ssh -o StrictHostKeyChecking=no -i /root/.ssh/id_rsa config@${{ needs.container-init.outputs.ip }} 'tar xz -C ~ && sudo env IP=${{ needs.container-init.outputs.ip }} PWD=$(pwd) cinc-client -l info --local-mode --chef-license accept --config-option cookbook_path=. -o config'
+        run: tar cz . | ssh -o StrictHostKeyChecking=no -i /root/.ssh/id_rsa config@${{ needs.init.outputs.ip }} 'tar xz -C ~ && sudo env IP=${{ needs.init.outputs.ip }} PWD=$(pwd) cinc-client -l info --local-mode --chef-license accept --config-option cookbook_path=. -o config'
 
 #        run: |
-#          ansible-playbook -i "${{ needs.container-init.outputs.ip }},"  -e "target=${{ needs.container-init.outputs.ip }}" /dev/stdin <<END
+#          ansible-playbook -i "${{ needs.init.outputs.ip }},"  -e "target=${{ needs.init.outputs.ip }}" /dev/stdin <<END
 #          ---
 #          - hosts: "{{ target | default('undef_host') }}"
 #            become: yes

@@ -1,10 +1,13 @@
 node['git']['repositories'].each do |repo_name|
-  repo_id = File.basename(repo_name)
-  src = File.expand_path(repo_name, Dir.pwd)
-  dst = File.join(node['git']['workspace'], repo_id)
+  src = (repo_name == "./") ?  "#{ENV['PWD']}" : File.expand_path(repo_name, ENV['PWD'])
+  name = File.basename(src)
+  dst = File.join(node['git']['workspace'], name)
 
-  ruby_block "create_repo_#{repo_id}" do
+  ruby_block "create_repo_#{name}" do
     block do
+
+      Chef::Log.info("src=#{src}, name=#{name}, dst=#{dst}")
+
       require 'net/http'
       require 'uri'
       api = URI("#{node['git']['endpoint']}/admin/users/#{node['git']['repo']['org']}/repos")
@@ -12,28 +15,26 @@ node['git']['repositories'].each do |repo_name|
       req = Net::HTTP::Post.new(api.request_uri)
       req.basic_auth(node['user'], node['password'])
       req['Content-Type'] = 'application/json'
-      req.body = { name: repo_id, private: false, auto_init: false, default_branch: node['git']['repo']['branch'] }.to_json
+      req.body = { name: name, private: false, auto_init: false, default_branch: node['git']['repo']['branch'] }.to_json
       response = http.request(req)
       code = response.code.to_i
       if code != 201 && code != 409
-        raise "Fehler beim Erstellen des Repos #{repo_id} (HTTP #{code}): #{res.body}"
+        raise "Fehler beim Erstellen des Repos #{name} (HTTP #{code}): #{response.body}"
       end
     end
     action :run
   end
 
-  directory ::File.dirname(dst) do
+  directory dst do
     recursive true
     action :create
   end
 
-  ruby_block "copy_repo_#{repo_id}" do
+  ruby_block "copy_repo_#{name}" do
     block do
       require 'fileutils'
-      source_root = ENV['PWD']
-      Chef::Log.info("Copying repo: id=#{repo_id}, name=#{repo_name}, env=#{source_root}")
-      src = File.expand_path(repo_name, source_root)
-      dst = File.join(node['git']['workspace'], File.basename(repo_name))
+      src = (repo_name == "./") ? ENV['PWD'] : File.expand_path(name, ENV['PWD'])
+      dst = File.join(node['git']['workspace'], File.basename(name))
       raise "Not found: #{src}" unless ::Dir.exist?(src)
       FileUtils.rm_rf(dst)
       FileUtils.mkdir_p(dst)
@@ -46,9 +47,10 @@ node['git']['repositories'].each do |repo_name|
   directory "#{dst}/.git" do
     recursive true
     action :delete
+    only_if { ::File.directory?("#{dst}/.git") }
   end
 
-  execute "git_init_#{repo_id}" do
+  execute "git_init_#{name}" do
     command "git init -b #{node['git']['repo']['branch']}"
     cwd dst
     user node['git']['app']['user']
@@ -60,50 +62,50 @@ node['git']['repositories'].each do |repo_name|
     owner node['git']['app']['user']
     group node['git']['app']['group']
     mode '0644'
-    variables(repo: repo_id, git_user: node['git']['app']['user'])
+    variables(repo: name, git_user: node['git']['app']['user'])
     action :create
   end
 
-  execute "git_add_#{repo_id}" do
+  execute "git_add_#{name}" do
     command 'git add --all'
     cwd dst
     user node['git']['app']['user']
     action :run
   end
 
-  ruby_block "check_git_status_#{repo_id}" do
+  ruby_block "check_git_status_#{name}" do
     block do
       result = %x(cd #{dst} && git status --porcelain)
-      node.run_state["#{repo_id}_dirty"] = !result.strip.empty?
+      node.run_state["#{name}_dirty"] = !result.strip.empty?
     end
     action :run
   end
 
-  execute "configure_git_identity_#{repo_id}" do
+  execute "configure_git_identity_#{name}" do
     command <<~EOH
       git config user.name "#{node['user']}"
       git config user.email "#{node['email']}"
     EOH
     cwd dst
     user node['git']['app']['user']
-    only_if { node.run_state["#{repo_id}_dirty"] }
+    only_if { node.run_state["#{name}_dirty"] }
     action :run
   end
 
-  execute "git_commit_#{repo_id}" do
-    command "git commit -m 'Update repository state'"
+  execute "git_commit_#{name}" do
+    command "git commit -a --allow-empty --allow-empty-message -m '' "
     cwd dst
     user node['git']['app']['user']
     environment 'HOME' => "/home/#{node['git']['app']['user']}"
-    only_if { node.run_state["#{repo_id}_dirty"] }
+    only_if { node.run_state["#{name}_dirty"] }
     action :run
   end
 
-  execute "git_push_#{repo_id}" do
+  execute "git_push_#{name}" do
     command "git push -f --set-upstream origin #{node['git']['repo']['branch']}"
     cwd dst
     user node['git']['app']['user']
-    environment 'GIT_TERMINAL_PROMPT' => '0'
+    environment 'GIT_TERMINAL_PROMPT' => '0', 'HOME' => "/home/#{node['git']['app']['user']}"
     only_if "git rev-parse HEAD", cwd: dst
     action :run
   end
