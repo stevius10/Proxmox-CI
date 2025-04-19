@@ -19,7 +19,7 @@ node['git']['repositories'].each do |repo_name|
       response = http.request(req)
       code = response.code.to_i
       if code != 201 && code != 409
-        raise "Fehler beim Erstellen des Repos #{name} (HTTP #{code}): #{response.body}"
+        raise "#{name} (HTTP #{code}): #{response.body}"
       end
     end
     action :run

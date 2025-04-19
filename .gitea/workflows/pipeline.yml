@@ -15,7 +15,7 @@ jobs:
       swap: ${{ steps.config.outputs.swap }}
       rootfs: ${{ steps.config.outputs.rootfs }}
       boot: ${{ steps.config.outputs.boot }}
-      shared: ${{ steps.config.outputs.shared }}
+      mount: ${{ steps.config.outputs.mount }}
       terminate: ${{ steps.config.outputs.terminate }}
 
     steps:
@@ -33,7 +33,7 @@ jobs:
           echo "swap=$SWAP" >> $GITEA_OUTPUT
           echo "rootfs=$ROOTFS" >> $GITEA_OUTPUT
           echo "boot=$BOOT" >> $GITEA_OUTPUT
-          echo "shared=$SHARED" >> $GITEA_OUTPUT
+          echo "mount=$MOUNT" >> $GITEA_OUTPUT
           echo "terminate=$TERMINATE" >> $GITEA_OUTPUT
 
   base:
@@ -51,7 +51,7 @@ jobs:
           swap: ${{ needs.init.outputs.swap }}
           rootfs: ${{ needs.init.outputs.rootfs }}
           boot: ${{ needs.init.outputs.boot }}
-          shared: ${{ needs.init.outputs.shared }}
+          mount: ${{ needs.init.outputs.mount }}
           terminate: ${{ needs.init.outputs.terminate }}
     if: ${{ github.ref == 'refs/heads/release' }}
 
