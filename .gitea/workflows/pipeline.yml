@@ -55,6 +55,15 @@ jobs:
           terminate: ${{ needs.init.outputs.terminate }}
     if: ${{ github.ref == 'refs/heads/release' }}
 
+  share:
+    runs-on: [ "shell" ]
+    needs: [init]
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      - name: Configure container
+        run: tar cz . | ssh -o StrictHostKeyChecking=no -i /root/.ssh/id_rsa config@${{ needs.init.outputs.ip }} 'tar xz -C ~ && sudo env IP=${{ needs.init.outputs.ip }} MOUNT=${{ needs.init.outputs.mount }} cinc-client -l info --local-mode --chef-license accept --config-option cookbook_path=. -o share'
+
   config:
     runs-on: [ "shell" ]
     needs: [init]
