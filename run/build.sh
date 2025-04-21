@@ -6,15 +6,15 @@ PROJECT_NAME="${PWD##*/}"
 # Paths 
 PROJECT_DIR="$(pwd)"
 
-DEVELOP_DIR="${DEVELOP_DIR:-"$PROJECT_DIR/local"}"
+DEVELOP_DIR="${DEVELOP_DIR:-"$PROJECT_DIR/run"}"
 SETUP_DIR="${SETUP_DIR:-"$PROJECT_DIR/setup"}"
 TEMP_DIR="${TEMP_DIR:-"$DEVELOP_DIR/.build"}"
 
 CURRENT_FILE="${1:-setup/tasks/main.yml}"
 
 # Configuration
-DOCKER_IMAGE_NAME="${DOCKER_IMAGE_NAME:-"$PROJECT_NAME-image"}"
-DOCKER_CONTAINER_NAME="${DOCKER_CONTAINER_NAME:-"$PROJECT_NAME-container"}"
+DOCKER_IMAGE_NAME="${DOCKER_IMAGE_NAME:-"$PROJECT_NAME"}"
+DOCKER_CONTAINER_NAME="${DOCKER_CONTAINER_NAME:-"$PROJECT_NAME"}"
 DOCKER_INIT_WAIT="${DOCKER_INIT_WAIT:-5}"
 
 # Environment 
@@ -68,6 +68,6 @@ if [[ -z "$CONTAINER_ID" ]]; then
 fi
 
 echo "[$PROJECT_NAME:Ansible] Apply role $ROLE_NAME"
-docker exec "$CONTAINER_ID" bash -c "mkdir -p config/.gitea/workflows && cp .gitea/workflows/pipeline.yml config/.gitea/workflows/ && env MOUNT=share cinc-client -l info --local-mode --config-option cookbook_path=. --chef-license accept -o share && cinc-client -l info --local-mode --config-option cookbook_path=. --chef-license accept -o config"
+docker exec "$CONTAINER_ID" bash -c "mkdir -p config/.gitea/workflows && cp .gitea/workflows/pipeline.yml config/.gitea/workflows/ && env MOUNT=share cinc-client -l info --local-mode --config-option cookbook_path=. --chef-license accept -o share && cinc-client -l info --local-mode --config-option cookbook_path=. --chef-license accept -j run/config.json -o config"
 # ANSIBLE_ROLES_PATH="/$SETUP_DIR" -e "architecture=arm64" "$CONTAINER_ID" ansible-playbook -e 'target=127.0.0.1' -c local ".docker/.build/${ROLE_NAME}.yml"
 

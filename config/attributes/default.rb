@@ -21,4 +21,4 @@ default['runner']['labels']         = 'shell'
 
 default['git']['repositories']      = [ "./base", "./" ]
 
-load(File.expand_path('secrets.rb', __FILE__)) if File.exist?(File.expand_path('secrets.rb', __FILE__))
+# load(File.expand_path('secrets.rb', __FILE__)) if File.exist?(File.expand_path('secrets.rb', __FILE__))

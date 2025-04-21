@@ -1,4 +1,4 @@
-- name: Update System
+- name: Update system
   apt:
     update_cache: true
     upgrade: full
@@ -6,87 +6,118 @@
     autoclean: true
     autoremove: true
 
-- name: Install Default Applications
+- name: Install default applications
   apt:
     name: "{{ default_packages }}"
     state: present
     install_recommends: false
 
-- name: Create Standard Users
+- name: Create standard users
   user:
     name: "{{ item.name }}"
     shell: "{{ item.shell | default('/bin/bash') }}"
     groups: "{{ item.groups | default(omit) }}"
-    create_home: "{{ item.create_home | default(false) }}"
+    create_home: yes
     state: present
   loop: "{{ users }}"
+  register: created_users
 
-- name: Deploy SSH Public Keys
-  authorized_key:
-    user: "{{ item }}"
-    state: present
-    key: "{{ lookup('file', 'id_rsa.pub') | trim }}"
-  when: lookup('file', 'id_rsa.pub') is defined
-  loop: "{{ ssh_users }}"
+- name: "Deploy SSH Keys"
+  block:
+    - name: "Ensure key directory exists"
+      file:
+        path: "/home/{{ item }}/.ssh"
+        state: directory
+        owner: "{{ item }}"
+        group: "{{ item }}"
+        mode: '0700'
+      loop: "{{ ssh_users }}"
+      when: item in ansible_facts.get('passwd', {})
 
-- name: Configure Sudo
-  copy:
-    dest: "/etc/sudoers.d/{{ item }}"
-    content: "{{ item }} ALL=(ALL:ALL) NOPASSWD: ALL\n"
-    validate: "visudo -cf %s"
+    - name: "Deploy authorized key"
+      ansible.posix.authorized_key:
+        user: "{{ item }}"
+        key: "{{ hostvars['localhost']['public_key'] }}"
+        state: present
+        exclusive: yes
+      loop: "{{ ssh_users }}"
+
+    - name: "Install private key"
+      copy:
+        content: "{{ hostvars['localhost']['private_key'] }}"
+        dest: "/home/{{ item }}/.ssh/id"
+        owner: "{{ item }}"
+        group: "{{ item }}"
+        mode: '0600'
+      loop: "{{ ssh_users }}"
+      when: item in ansible_facts.get('passwd', {})
+
+    - name: "Install public key"
+      copy:
+        content: "{{ hostvars['localhost']['public_key'] }}"
+        dest: "/home/{{ item }}/.ssh/id.pub"
+        owner: "{{ item }}"
+        group: "{{ item }}"
+        mode: '0644'
+      loop: "{{ ssh_users }}"
+      when: item in ansible_facts.get('passwd', {})
+
+  when: ssh_users is defined
+
+- name: "Configure Sudo"
+  ansible.builtin.lineinfile:
+    path: "/etc/sudoers.d/{{ item }}"
+    regexp: "^#?{{ item }}"
+    line: "{{ item }} ALL=(ALL:ALL) NOPASSWD: ALL"
+    validate: 'visudo -cf %s'
     owner: root
     group: root
     mode: '0440'
-    backup: true
+    state: present
+    create: yes
   loop: "{{ ssh_users }}"
 
+- name: "Harden SSH"
+  block:
+    - name: "Disable password authentication"
+      ansible.builtin.lineinfile:
+        path: /etc/ssh/sshd_config
+        regexp: "^#?PasswordAuthentication"
+        line: "PasswordAuthentication no"
+        backup: yes
+        state: present
 
-- name: Disable SSH Password Authentication
-  lineinfile:
-    path: /etc/ssh/sshd_config
-    regexp: "^#?PasswordAuthentication"
-    line: "PasswordAuthentication no"
-    backup: true
+    - name: "Disable root login"
+      ansible.builtin.lineinfile:
+        path: /etc/ssh/sshd_config
+        regexp: "^#?PermitRootLogin"
+        line: "PermitRootLogin no"
+        backup: yes
+        state: present
+
   notify: Restart SSH
 
-- name: Disable SSH Root Login
-  lineinfile:
-    path: /etc/ssh/sshd_config
-    regexp: "^#?PermitRootLogin"
-    line: "PermitRootLogin no"
-    backup: true
-  notify: Restart SSH
+- name: "Install Cinc"
+  block:
+    - name: "Get latest Cinc version"
+      ansible.builtin.uri:
+        url: https://downloads.cinc.sh/files/stable/cinc/
+        return_content: yes
+      register: cinc_versions
+      changed_when: false
 
-- name: Get latest Cinc version
-  shell: curl -s https://downloads.cinc.sh/files/stable/cinc/ | grep -oP 'href="\d.*/"' | sort -V | tail -n1 | cut -d '"' -f2 | cut -d'/' -f1
-  register: cinc_version_result
-  changed_when: false
+    - name: "Extract latest version"
+      ansible.builtin.set_fact:
+        cinc_version: "{{ cinc_versions.content | regex_findall('href=\"(\\d+\\.\\d+\\.\\d+)/\"') | sort | last }}"
 
-- name: Set Cinc download URL
-  set_fact:
-    cinc_url: https://downloads.cinc.sh/files/stable/cinc/{{cinc_version_result.stdout}}/debian/12/cinc_{{cinc_version_result.stdout}}-1_{{ lookup('env', 'architecture') | default('amd64', true) }}.deb
-  register: cinc_url_result
+    - name: "Download package"
+      ansible.builtin.get_url:
+        url: "https://downloads.cinc.sh/files/stable/cinc/{{ cinc_version }}/debian/12/cinc_{{ cinc_version }}-1_amd64.deb"
+        dest: /tmp/cinc.deb
+        validate_certs: no
 
-- name: Debug Cinc URL
-  debug:
-    msg: "Get Cinc {{ cinc_version_result.stdout }} from {{ cinc_url }}"
+    - name: "Install package"
+      ansible.builtin.apt:
+        deb: /tmp/cinc.deb
+        state: present
 
-- name: Download cinc-client.deb
-  ansible.builtin.get_url:
-    url: "{{ cinc_url }}"
-    dest: ./cinc-client.deb
-    validate_certs: false
-    mode: '0644'
-  when: cinc_version_result.stdout is defined
-
-
-- name: Install cinc-client.deb
-  ansible.builtin.apt:
-    deb: ./cinc-client.deb
-    state: present
-#
-#- name: Install Cinc Client
-#  shell: url=$(curl -s https://downloads.cinc.sh/files/stable/cinc/ | grep -oP 'href="\d.*/"' | sort -V | tail -n 1 | awk -F '"' '{print  $2 }' | awk -F '/' '{print  "https://downloads.cinc.sh/files/stable/cinc/" $1 "/debian/12/cinc_" $1 "-1_{{ lookup('env', 'architecture') | default('amd64', true) }}".deb" }') && wget -O ./cinc-client.deb "$url" && dpkg -i ./cinc-client.deb && apt-get install -f -y
-#
-#  args:
-#    creates: /opt/cinc/bin/cinc-client

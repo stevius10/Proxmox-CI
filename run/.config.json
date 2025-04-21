@@ -1,0 +1,17 @@
+{
+
+  "proxmox":
+    {
+      "host": "",
+      "api": "",
+      "user": "",
+      "token": "",
+      "secret": ""
+    },
+
+  "user": "",
+  "password": "",
+  "email": "",
+  "pub": ""
+
+}

@@ -25,7 +25,7 @@ jobs:
         name: Set configuration
         run: |
           source config.env
-          echo "ip=192.168.178.$ID" >> $GITEA_OUTPUT
+          echo "ip=$IP" >> $GITEA_OUTPUT
           echo "id=$ID" >> $GITEA_OUTPUT
           echo "hostname=$HOSTNAME" >> $GITEA_OUTPUT
           echo "cores=$CORES" >> $GITEA_OUTPUT
@@ -62,7 +62,7 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
       - name: Configure container
-        run: tar cz . | ssh -o StrictHostKeyChecking=no -i /root/.ssh/id_rsa config@${{ needs.init.outputs.ip }} 'tar xz -C ~ && sudo env IP=${{ needs.init.outputs.ip }} MOUNT=${{ needs.init.outputs.mount }} cinc-client -l info --local-mode --chef-license accept --config-option cookbook_path=. -o share'
+        run: tar cz . | ssh -o StrictHostKeyChecking=no -i /root/.ssh/${{ needs.init.outputs.id }} config@${{ needs.init.outputs.ip }} 'tar xz -C ~ && sudo env IP=${{ needs.init.outputs.ip }} MOUNT=${{ needs.init.outputs.mount }} cinc-client -l info --local-mode --chef-license accept --config-option cookbook_path=. -o share'
 
   config:
     runs-on: [ "shell" ]
@@ -71,19 +71,4 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
       - name: Configure container
-        run: tar cz . | ssh -o StrictHostKeyChecking=no -i /root/.ssh/id_rsa config@${{ needs.init.outputs.ip }} 'tar xz -C ~ && sudo env IP=${{ needs.init.outputs.ip }} PWD=$(pwd) cinc-client -l info --local-mode --chef-license accept --config-option cookbook_path=. -o config'
-
-#        run: |
-#          ansible-playbook -i "${{ needs.init.outputs.ip }},"  -e "target=${{ needs.init.outputs.ip }}" /dev/stdin <<END
-#          ---
-#          - hosts: "{{ target | default('undef_host') }}"
-#            become: yes
-#            gather_facts: no
-#            roles:
-#              - setup
-#            vars:
-#              ansible_user: "config"
-#              ansible_ssh_private_key_file: /root/.ssh/id_rsa
-#            vars_files:
-#              - "$(pwd)/setup/group_vars/all.yml"
-#          END
+        run: tar cz . | ssh -o StrictHostKeyChecking=no -i /root/.ssh/${{ needs.init.outputs.id }} config@${{ needs.init.outputs.ip }} 'tar xz -C ~ && sudo env IP=${{ needs.init.outputs.ip }} PWD=$(pwd) cinc-client -l info --local-mode --chef-license accept --config-option cookbook_path=. -o config'

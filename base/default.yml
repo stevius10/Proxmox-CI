@@ -1,17 +1,55 @@
 ---
-- name: "Prepare Environment"
+- name: "Base Container"
   hosts: localhost
   gather_facts: no
   vars:
     os: "local:vztmpl/debian-12-standard_12.7-1_amd64.tar.zst"
-    ip: "{{ ip }}"
-    id: "{{ id }}"
-    terminate: "{{ terminate }}"
-    PROXMOX_HOST: "{{ PM_HOST }}"
+    PROXMOX_HOST: "{{ PROXMOX_HOST }}"
     PROXMOX_USER: "{{ PROXMOX_USER }}"
     PROXMOX_TOKEN_ID: "{{ PROXMOX_TOKEN_ID }}"
     PROXMOX_TOKEN_SECRET: "{{ PROXMOX_TOKEN_SECRET }}"
+
   tasks:
+
+    - name: "Check configuration"
+      ansible.builtin.stat:
+        path: "config.json"
+      register: config_file
+
+    - name: "Load configuration"
+      ansible.builtin.include_vars:
+        file: "config.json"
+        name: config
+      when: config_file.stat.exists
+
+    - name: "Set connection configuration"
+      ansible.builtin.set_fact:
+        PROXMOX_HOST: "{{ config.proxmox.host | default(lookup('env', 'PM_HOST')) }}"
+        PROXMOX_USER: "{{ config.proxmox.user | default(lookup('env', 'PROXMOX_USER')) }}"
+        PROXMOX_TOKEN_ID: "{{ config.proxmox.token | default(lookup('env', 'PROXMOX_TOKEN_ID')) }}"
+        PROXMOX_TOKEN_SECRET: "{{ config.proxmox.secret | default(lookup('env', 'PROXMOX_TOKEN_SECRET')) }}"
+      when:
+        - (config_file.stat.exists and config.proxmox is defined) or
+          (not config_file.stat.exists)
+
+    - name: "Generate keypair"
+      community.crypto.openssh_keypair:
+        path: "/root/.ssh/{{ id }}"
+        type: ed25519
+        mode: '0600'
+        force: false
+
+#    - name: "Set keypair facts"
+#      set_fact:
+#        private_key: "{{ lookup('file', '/root/.ssh/' ~ id) }}"
+#        public_key: "{{ lookup('file', '/root/.ssh/' ~ id ~ '.pub') }}"
+
+#    - name: "Set permissions for public key"
+#      ansible.builtin.file:
+#        path: "/root/.ssh/{{ id }}.pub"
+#        mode: '0644'
+#        owner: root
+#        group: root
 
     - name: "Check for container"
       community.general.proxmox_vm_info:
@@ -91,7 +129,7 @@
         ostemplate: "{{ os }}"
         cores: "{{ cores }}"
         memory: "{{ memory }}"
-        pubkey: "{{ lookup('file', '/root/.ssh/id_rsa.pub') | trim }}"
+        pubkey: "{{ lookup('file', '/root/.ssh/' ~ id ~ '.pub') | trim }}"
         swap: "{{ swap }}"
         disk: "{{ rootfs }}"
         netif:
@@ -121,7 +159,7 @@
       delegate_to: localhost
 
     - name: "Test config user"
-      command: "ssh -o BatchMode=yes -o ConnectTimeout=5 -i /root/.ssh/id_rsa config@{{ ip }} echo success"
+      command: "ssh -o BatchMode=yes -o ConnectTimeout=5 -i /root/.ssh/{{ id }} config@{{ ip }} echo success"
       register: ssh_config_test
       failed_when: false
       changed_when: false
@@ -131,34 +169,26 @@
       set_fact:
         ssh_user: "{{ 'config' if (container_exists and (terminate | bool == false) and (ssh_config_test.rc | default(1)) == 0) else 'root' }}"
 
-    - name: "Add container to inventory dynamically"
+    - name: "Add container to inventory"
       add_host:
         name: container
         ansible_host: "{{ ip }}"
         ansible_user: "{{ ssh_user }}"
-        ansible_ssh_private_key_file: /root/.ssh/id_rsa
+        ansible_ssh_private_key_file: "{{ lookup('file', '/root/.ssh/' ~ id) }}"
         ansible_ssh_common_args: '-o StrictHostKeyChecking=no'
 
-    - name: "Debug SSH user decision"
-      debug:
-        msg: >
-          container_exists: {{ container_exists }}
-          terminate: {{ terminate }}
-          ssh_config_test.rc: {{ ssh_config_test.rc | default('undefined') }}
-          ssh_user: {{ ssh_user }}
-
-    - name: Reset host
+    - name: "Reset known_hosts"
       ansible.builtin.known_hosts:
         name: "{{ ip }}"
         state: absent
       delegate_to: localhost
       become: false
 
-- name: "Remote container default configuration"
+- name: "Remote container configuration"
   hosts: container
-  gather_facts: no
+  gather_facts: yes
   become: true
   tasks:
-    - name: "Apply default configuration"
+    - name: "Apply base configuration"
       ansible.builtin.include_role:
         name: base

@@ -1,9 +1,6 @@
+**/.git/
+
 /config/.gitea/
 /local/.build/
 
-/base/roles/base/files/id_rsa.pub
-/config/attributes/secrets.rb
-
 /.idea
-
-# /setup/group_vars/secrets.yml

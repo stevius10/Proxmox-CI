@@ -1,3 +1,17 @@
+ruby_block 'information' do
+  block do
+    Chef::Log.info("=== ATTRIBUTES ===")
+    node&.each do |key, value|
+      Chef::Log.info("ATTR #{key}=#{value}")
+    end
+
+    Chef::Log.info("=== DATABAG JSON (-j übergeben) ===")
+    node.override_attrs&.each do |key, value|
+      Chef::Log.info("DATA #{key}=#{value}")
+    end
+  end
+end
+
 [
   "/home/#{node['git']['app']['user']}",
   "#{node['git']['home']}",
