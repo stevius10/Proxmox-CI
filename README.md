@@ -1,53 +1,85 @@
-# Proxmox CI: CI Environment for LXC Container Automation
+# Proxmox CI: Container Automation
 
 ## Overview
 
-Proxmox CI is an automation environment for provisioning and orchestrating Linux containers (LXC) in Proxmox VE.  
+Proxmox CI implements a self-contained, extensible CI/CD environment for provisioning, configuring, and orchestrating Linux Containers (LXC) within Proxmox VE. Leveraging an Infrastructure-as-Code (IaC) approach, it manages the entire container lifecycle—bootstrapping, deployment, configuration, and verification—through version-controlled automation.
 
-It is designed as a self-managed system, supporting continuous adaptation and extension by maintaining provisioning, configuration, and deployment processes within an integrated, version-controlled Git environment.  
+The system follows a multi-stage pipeline capable of recursively deploying and configuring itself. Initial bootstrapping is performed via a local Docker environment, with subsequent deployments targeting Proxmox VE. This approach ensures consistent, reproducible, and automated infrastructure management.
 
-The architecture separates infrastructure provisioning, system configuration, and runtime execution into modular stages to enable reproducible Proxmox VE container builds.
+## Architecture
 
+The architecture is based on a self-replicating pipeline.
 
-![Proxmox CI Deployment](docs/redeploy.png)
+<p align="center">
+  <img src="./docs/concept.svg" alt="Concept"/>
+</p>
 
-## Core Components
+### Provisioning & Configuration
+- Ansible (`base/default.yml`) interacts with the Proxmox API using the `community.general.proxmox` collection to create containers using reproducible configuration via the `base/roles/base` role and installs configuration management.
+- Chef/Cinc (code in `config/` and `share/`) is executed inside the container to manage application-level configuration.
 
-### Layered Structure
+### Self-Replication
+- During configuration, the codebase is pushed into a Gitea instance running inside the container.
+- This triggers the same pipeline from within the new environment, enabling recursive configuration ("pipeline within a pipeline").
+- Subsequent runs are idempotent: Ansible and Chef validate and enforce the desired state using a static configuration.
 
-- **init:** Loads centralized configuration.
-- **base:** Provisions default base container.
-- **share:** Configures network shares for integration access.
-- **config:** Applies configuration and runtime setup.
+### Pipeline Workflow
 
-## Continuous Self-Management
+<p align="center">
+  <img src="./docs/pipeline.png" alt="Concept"/>
+</p>
 
-- **Container Configuration:** Centralized container configuration via `config.env`.
-- **Container Provisioning:** Managed via Proxmox API and Ansible.
-- **Configuration Management:** Ansible for provisioning, Chef (Cinc) for configuration.
-- **Local Development:** Docker-based environment for local testing.
-- **Repository Management:** Automated API calls to the integrated Git service.
-- **Network Shares:** Provisioned for extendable shared workspace access.
+Stages include:
+
+- **`base` Job**
+    - Triggered on `release` branch pushes.
+    - Uses a composite action (`srv/base/.gitea/workflows@main`) to check out the provisioning repository and run Ansible for container setup.
+
+- **`config` (and `share`) Jobs**
+    - Copy project files into the container and execute Chef/Cinc in local mode to configure the system.
+
+## Core Concepts
+
+- **Self-Managed Infrastructure:** The system provisions, configures, and verifies itself recursively via the pipeline.
+
+- **Container Provisioning:** Managed by Ansible playbooks and roles using the Proxmox API for lifecycle management and base setup.
+
+- **Container Configuration:** Managed by Chef/Cinc cookbooks executed via `cinc-client` in local mode. Configuration is parameterized using environment variables and Chef attributes.
+
+- **Modularity:** Distinct components and modular reusable workflows managed within Gitea, facilitating extension.
+
+- **Environment Management:** Secrets and environment variables are initially loaded from config.json during local bootstrapping and automatically propagated into the CI system.
+
+- **CI/CD Orchestration:** Defined in `.gitea/workflows/pipeline.yml` using Gitea Actions syntax. Execution is handled by a Gitea Runner installed inside the container.
+
+- **Network Share:** Configured for integration purposes.
 
 ## Project Structure
-
 ```
 .
 ├── .gitea/workflows/       # Pipeline definitions
-├── config/                 # Configuration
-│   ├── attributes/
-│   ├── recipes/
-│   └── templates/
-├── default/                # Base container configuration
+├── base/                   # Base container
 │   ├── .gitea/workflows/
-│   ├── roles/setup/
+│   ├── roles/base/
 │   └── default.yml
-├── local/                  # Local development
+├── config/                 # Container configuration
+│   ├── attributes/
+│   ├── libraries/
+│   ├── recipes/
+│   └── templates/
+├── run/                    # Local development and bootstrapping
 │   ├── Dockerfile
-│   └── run.sh
-├── share/                  # Network share
+│   ├── config.json         # Deployment configuration template
+│   └── build.sh
+├── share/                  # Shared integration resources
 │   ├── attributes/
 │   ├── recipes/
 │   └── templates/
-└── config.env              # Container configuration
+└── config.env              # Environment configuration
 ```
+---
+
+This repository provides a reproducible and modular automation pattern for managing containerized environments in Proxmox VE. 
+
+The approach emphasizes declarative configuration, automated validation, and recursive self-management.
+
