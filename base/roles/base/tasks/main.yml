@@ -1,123 +1,124 @@
-- name: Update system
-  apt:
-    update_cache: true
-    upgrade: full
-    cache_valid_time: 3600
-    autoclean: true
-    autoremove: true
-
-- name: Install default applications
-  apt:
-    name: "{{ default_packages }}"
-    state: present
-    install_recommends: false
-
-- name: Create standard users
-  user:
-    name: "{{ item.name }}"
-    shell: "{{ item.shell | default('/bin/bash') }}"
-    groups: "{{ item.groups | default(omit) }}"
-    create_home: yes
-    state: present
-  loop: "{{ users }}"
-  register: created_users
-
-- name: "Deploy SSH Keys"
+- name: Basic system configuration
   block:
-    - name: "Ensure key directory exists"
-      file:
-        path: "/home/{{ item }}/.ssh"
-        state: directory
-        owner: "{{ item }}"
-        group: "{{ item }}"
-        mode: '0700'
-      loop: "{{ ssh_users }}"
-      when: item in ansible_facts.get('passwd', {})
+  - name: Update system
+    apt:
+      update_cache: true
+      upgrade: full
+      cache_valid_time: 3600
+      autoclean: true
+      autoremove: true
 
-    - name: "Deploy authorized key"
-      ansible.posix.authorized_key:
-        user: "{{ item }}"
-        key: "{{ public_key }}"
-        state: present
-        exclusive: yes
-      loop: "{{ ssh_users }}"
+  - name: Install default applications
+    apt:
+      name: "{{ default_packages }}"
+      state: present
+      install_recommends: false
 
-    - name: "Copy private key" # TODO: Secure Key Management
-      copy:
-        content: "{{ private_key }}"
-        dest: "/home/{{ item }}/.ssh/id"
-        owner: "{{ item }}"
-        group: "{{ item }}"
-        mode: '0600'
-      loop: "{{ ssh_users }}"
-      when: item in ansible_facts.get('passwd', {})
+  - name: Create standard users
+    user:
+      name: "{{ item.name }}"
+      shell: "{{ item.shell | default('/bin/bash') }}"
+      groups: "{{ item.groups | default(omit) }}"
+      create_home: yes
+      state: present
+    loop: "{{ users }}"
+    register: created_users
 
-    - name: "Copy public key"
-      copy:
-        content: "{{ public_key }}"
-        dest: "/home/{{ item }}/.ssh/id.pub"
-        owner: "{{ item }}"
-        group: "{{ item }}"
-        mode: '0644'
-      loop: "{{ ssh_users }}"
-      when: item in ansible_facts.get('passwd', {})
+  - name: Configure Sudo
+    ansible.builtin.lineinfile:
+      path: "/etc/sudoers.d/{{ item }}"
+      regexp: "^#?{{ item }}"
+      line: "{{ item }} ALL=(ALL:ALL) NOPASSWD: ALL"
+      validate: 'visudo -cf %s'
+      owner: root
+      group: root
+      mode: '0440'
+      state: present
+      create: yes
+    loop: "{{ ssh_users }}"
 
-  when: ssh_users is defined
-
-- name: "Configure Sudo"
-  ansible.builtin.lineinfile:
-    path: "/etc/sudoers.d/{{ item }}"
-    regexp: "^#?{{ item }}"
-    line: "{{ item }} ALL=(ALL:ALL) NOPASSWD: ALL"
-    validate: 'visudo -cf %s'
-    owner: root
-    group: root
-    mode: '0440'
-    state: present
-    create: yes
-  loop: "{{ ssh_users }}"
-
-- name: "Harden SSH"
+- name: Install configuration management
   block:
-    - name: "Disable password authentication"
-      ansible.builtin.lineinfile:
-        path: /etc/ssh/sshd_config
-        regexp: "^#?PasswordAuthentication"
-        line: "PasswordAuthentication no"
-        backup: yes
-        state: present
 
-    - name: "Disable root login"
-      ansible.builtin.lineinfile:
-        path: /etc/ssh/sshd_config
-        regexp: "^#?PermitRootLogin"
-        line: "PermitRootLogin no"
-        backup: yes
-        state: present
+  - name: Get latest Cinc version
+    ansible.builtin.uri:
+      url: https://downloads.cinc.sh/files/stable/cinc/
+      return_content: yes
+    register: cinc_versions
+    changed_when: false
 
+  - name: Extract version
+    ansible.builtin.set_fact:
+      cinc_version: "{{ cinc_versions.content | regex_findall('href=\"(\\d+\\.\\d+\\.\\d+)/\"') | sort | last }}"
+
+  - name: Download
+    ansible.builtin.get_url:
+      url: "https://downloads.cinc.sh/files/stable/cinc/{{ cinc_version }}/debian/12/cinc_{{ cinc_version }}-1_{{ arch | default('amd64') }}.deb"
+      dest: /tmp/cinc.deb
+      validate_certs: no
+
+  - name: Install Cinc
+    ansible.builtin.apt:
+      deb: /tmp/cinc.deb
+      state: present
+
+- name: SSH Configuration
+  when: ssh_users is defined and (configure_ssh | default(true) | bool)
   notify: Restart SSH
-
-- name: "Install Cinc"
   block:
-    - name: "Get latest Cinc version"
-      ansible.builtin.uri:
-        url: https://downloads.cinc.sh/files/stable/cinc/
-        return_content: yes
-      register: cinc_versions
-      changed_when: false
+  - name: Check directory
+    file:
+      path: "/home/{{ item }}/.ssh"
+      state: directory
+      owner: "{{ item }}"
+      group: "{{ item }}"
+      mode: '0700'
+    loop: "{{ ssh_users }}"
+    when: item in ansible_facts.get('passwd', {})
 
-    - name: "Extract latest version"
-      ansible.builtin.set_fact:
-        cinc_version: "{{ cinc_versions.content | regex_findall('href=\"(\\d+\\.\\d+\\.\\d+)/\"') | sort | last }}"
+  - name: Set authorized key
+    ansible.posix.authorized_key:
+      user: "{{ item }}"
+      key: "{{ public_key }}"
+      state: present
+      exclusive: yes
+    loop: "{{ ssh_users }}"
 
-    - name: "Download package"
-      ansible.builtin.get_url:
-        url: "https://downloads.cinc.sh/files/stable/cinc/{{ cinc_version }}/debian/12/cinc_{{ cinc_version }}-1_amd64.deb"
-        dest: /tmp/cinc.deb
-        validate_certs: no
+  - name: Private key # TODO: Secure Key Management
+    copy:
+      content: "{{ private_key }}"
+      dest: "/home/{{ item }}/.ssh/id"
+      owner: "{{ item }}"
+      group: "{{ item }}"
+      mode: '0600'
+    loop: "{{ ssh_users }}"
+    when: item in ansible_facts.get('passwd', {})
 
-    - name: "Install package"
-      ansible.builtin.apt:
-        deb: /tmp/cinc.deb
-        state: present
+  - name: Public key
+    copy:
+      content: "{{ public_key }}"
+      dest: "/home/{{ item }}/.ssh/id.pub"
+      owner: "{{ item }}"
+      group: "{{ item }}"
+      mode: '0644'
+    loop: "{{ ssh_users }}"
+    when: item in ansible_facts.get('passwd', {})
 
+- name: SSH hardening
+  when: (configure_ssh | default(true) | bool)
+  block:
+  - name: Disable password authentication
+    ansible.builtin.lineinfile:
+      path: /etc/ssh/sshd_config
+      regexp: "^#?PasswordAuthentication"
+      line: "PasswordAuthentication no"
+      backup: yes
+      state: present
+
+  - name: Disable SSH root login
+    ansible.builtin.lineinfile:
+      path: /etc/ssh/sshd_config
+      regexp: "^#?PermitRootLogin"
+      line: "PermitRootLogin no"
+      backup: yes
+      state: present
