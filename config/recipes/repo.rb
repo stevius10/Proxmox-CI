@@ -3,7 +3,6 @@ node['git']['repositories'].each do |repo_name|
   name = File.basename(src)
   dst = File.join(node['git']['workspace'], name)
 
-  # Repo anlegen (API-Call)
   ruby_block "create_repo_#{name}" do
     block do
       require 'net/http'
@@ -29,19 +28,20 @@ node['git']['repositories'].each do |repo_name|
     action :run
   end
 
-  # Zielverzeichnis immer löschen und neu anlegen, um den Stand zu garantieren
   ruby_block "prepare_repo_#{name}" do
     block do
       require 'fileutils'
       FileUtils.rm_rf(dst)
       FileUtils.mkdir_p(dst)
-      FileUtils.cp_r("#{src}/.", dst, remove_destination: true)
+      Dir.children(src).each do |entry|
+        next if entry == '.git'
+        FileUtils.cp_r(File.join(src, entry), File.join(dst, entry), remove_destination: true)
+      end
       FileUtils.chown_R(node['git']['app']['user'], node['git']['app']['group'], dst)
     end
     action :run
   end
 
-  # Git initialisieren, falls neu
   execute "git_init_#{name}" do
     command "git init -b #{node['git']['repo']['branch']}"
     cwd dst
@@ -50,7 +50,6 @@ node['git']['repositories'].each do |repo_name|
     only_if { node.run_state["#{name}_repo_created"] }
   end
 
-  # .git/config immer via Template überschreiben
   template "#{dst}/.git/config" do
     source 'repo_config.erb'
     owner node['git']['app']['user']
@@ -64,14 +63,16 @@ node['git']['repositories'].each do |repo_name|
     only_if { ::File.directory?("#{dst}/.git") }
   end
 
-  # Neues Repo: normaler Push auf Default-Branch
   execute "git_initial_push_#{name}" do
     command <<-EOH
       git add --all
       git config user.name "#{node['user']}"
       git config user.email "#{node['email']}"
-      git commit -m 'Initial commit' --allow-empty
+      git commit -m 'initial commit [skip ci]'´
       git push -u origin #{node['git']['repo']['branch']}
+      git checkout -b release
+      git commit -m 'Initial commit' --allow-empty --allow-empty-message -m ''
+      git push -u origin release
     EOH
     cwd dst
     user node['git']['app']['user']
@@ -80,7 +81,6 @@ node['git']['repositories'].each do |repo_name|
     action :run
   end
 
-  # Existierendes Repo: Orphan-Branch "static" pushen, ohne Historie
   execute "git_orphan_static_push_#{name}" do
     command <<-EOH
       git init

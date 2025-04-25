@@ -20,7 +20,7 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: https://gitea.com/actions/checkout@v4
       - id: config
         name: Set configuration
         run: |
@@ -53,22 +53,22 @@ jobs:
           boot: ${{ needs.init.outputs.boot }}
           mount: ${{ needs.init.outputs.mount }}
           terminate: ${{ needs.init.outputs.terminate }}
-    if: ${{ github.ref == 'refs/heads/release' }}
+    if: ${{ gitea.ref == 'refs/heads/release' }}
 
   share:
     runs-on: [ "shell" ]
     needs: [init]
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: https://gitea.com/actions/checkout@v4
       - name: Configure container
-        run: tar cz . | ssh -o StrictHostKeyChecking=no -i /root/.ssh/${{ needs.init.outputs.id }} config@${{ needs.init.outputs.ip }} 'tar xz -C ~ && sudo env IP=${{ needs.init.outputs.ip }} MOUNT=${{ needs.init.outputs.mount }} cinc-client -l info --local-mode --chef-license accept --config-option cookbook_path=. -o share'
+        run: tar cz . | sudo ssh -o StrictHostKeyChecking=no -i /root/.ssh/${{ needs.init.outputs.id }} config@${{ needs.init.outputs.ip }} 'tar xz -C ~ && sudo env IP=${{ needs.init.outputs.ip }} MOUNT=${{ needs.init.outputs.mount }} cinc-client -l debug --local-mode --chef-license accept --config-option cookbook_path=. -o share'
 
   config:
     runs-on: [ "shell" ]
     needs: [init]
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: https://gitea.com/actions/checkout@v4
       - name: Configure container
-        run: tar cz . | ssh -o StrictHostKeyChecking=no -i /root/.ssh/${{ needs.init.outputs.id }} config@${{ needs.init.outputs.ip }} 'tar xz -C ~ && sudo env IP=${{ needs.init.outputs.ip }} PWD=$(pwd) cinc-client -l info --local-mode --chef-license accept --config-option cookbook_path=. -o config'
+        run: tar cz . | sudo ssh -o StrictHostKeyChecking=no -i /root/.ssh/${{ needs.init.outputs.id }} config@${{ needs.init.outputs.ip }} 'tar xz -C ~ && sudo env IP=${{ needs.init.outputs.ip }} PWD=$(pwd) cinc-client -l info --local-mode --chef-license accept --config-option cookbook_path=. -o config'

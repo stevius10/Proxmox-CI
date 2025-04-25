@@ -1,6 +1,7 @@
+.gh
 **/.git/
 
 /config/.gitea/
-/local/.build/
+/run/.build/
 
 /.idea

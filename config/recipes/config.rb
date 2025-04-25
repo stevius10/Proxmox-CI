@@ -53,7 +53,7 @@ ruby_block 'add_key' do
     http, req = Net::HTTP.new(api.host, api.port), Net::HTTP::Post.new(api.request_uri)
     req['Content-Type'] = 'application/json'
     req.basic_auth(Env.get(node, 'user'), Env.get(node, 'password'))
-    req.body = { title: "proxmox ci technical key", key: node.run_state['pub'] || Env.get(node, 'pub') }.to_json
+    req.body = { title: "proxmox-ci", key: node.run_state['pub'] || Env.get(node, 'pub') }.to_json
     response = http.request(req)
     code = response.code.to_i
     raise "HTTP #{code}: #{response.body}" if code != 201 && code != 422

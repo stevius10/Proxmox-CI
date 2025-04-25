@@ -28,7 +28,7 @@ module Env
     req['Content-Type'] = 'application/json'
     req.body = { name: key, value: value.to_s }.to_json
     res = http.request(req)
-    raise "set_variable #{key} failed: #{res.code} – #{res.body}" unless [201, 204, 409, 422].include?(res.code.to_i)
+    raise "Set #{key} failed: #{res.code} – #{res.body}" unless [201, 204, 409, 422].include?(res.code.to_i)
     true
   end
 
@@ -38,7 +38,7 @@ module Env
     req = Net::HTTP::Get.new(uri.request_uri)
     req.basic_auth(*creds(node))
     res = http.request(req)
-    raise "get_variable #{key} failed: #{res.code} – #{res.body}" unless res.code.to_i == 200
+    raise "Get #{key} failed: #{res.code} – #{res.body}" unless res.code.to_i == 200
     JSON.parse(res.body)['data']['value']
   end
 
@@ -50,7 +50,7 @@ module Env
     req['Content-Type'] = 'application/json'
     req.body = { name: key, value: value.to_s }.to_json
     res = http.request(req)
-    raise "set_secret #{key} failed: #{res.code} – #{res.body}" unless [201, 204, 409, 422].include?(res.code.to_i)
+    raise "Set #{key} failed: #{res.code} – #{res.body}" unless [201, 204, 409, 422].include?(res.code.to_i)
     true
   end
 
@@ -60,7 +60,7 @@ module Env
     req = Net::HTTP::Get.new(uri.request_uri)
     req.basic_auth(*creds(node))
     res = http.request(req)
-    raise "get_secret #{key} failed: #{res.code} – #{res.body}" unless res.code.to_i == 200
+    raise "Grt #{key} failed: #{res.code} – #{res.body}" unless res.code.to_i == 200
     JSON.parse(res.body)['data']['value']
   end
 

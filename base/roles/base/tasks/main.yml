@@ -37,14 +37,14 @@
     - name: "Deploy authorized key"
       ansible.posix.authorized_key:
         user: "{{ item }}"
-        key: "{{ hostvars['localhost']['public_key'] }}"
+        key: "{{ public_key }}"
         state: present
         exclusive: yes
       loop: "{{ ssh_users }}"
 
-    - name: "Install private key"
+    - name: "Copy private key" # TODO: Secure Key Management
       copy:
-        content: "{{ hostvars['localhost']['private_key'] }}"
+        content: "{{ private_key }}"
         dest: "/home/{{ item }}/.ssh/id"
         owner: "{{ item }}"
         group: "{{ item }}"
@@ -52,9 +52,9 @@
       loop: "{{ ssh_users }}"
       when: item in ansible_facts.get('passwd', {})
 
-    - name: "Install public key"
+    - name: "Copy public key"
       copy:
-        content: "{{ hostvars['localhost']['public_key'] }}"
+        content: "{{ public_key }}"
         dest: "/home/{{ item }}/.ssh/id.pub"
         owner: "{{ item }}"
         group: "{{ item }}"

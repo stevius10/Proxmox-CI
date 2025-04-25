@@ -11,7 +11,7 @@ ENV IP=127.0.0.1
 STOPSIGNAL SIGRTMIN+3
 ENV container=docker
 
-RUN apt update -y && apt install -y sudo make curl jq git systemd vim wget net-tools procps && apt clean all && \
+RUN apt update -y && apt install -y sudo make curl jq git systemd vim wget net-tools procps ansible && apt clean all && \
     rm -rf /var/cache/dnf/* /tmp/* /var/tmp/*
 
 RUN rm -rf /lib/systemd/system/multi-user.target.wants/* ; \
@@ -29,6 +29,7 @@ RUN groupadd -f root && \
     echo "config ALL=(ALL) NOPASSWD:ALL" > /etc/sudoers.d/config && \
     echo "user ALL=(ALL) NOPASSWD:ALL" > /etc/sudoers.d/user
 
+RUN LC_ALL="C.UTF-8" ansible-galaxy collection install -p /usr/share/ansible/collections community.general
 RUN url=$(curl -s https://downloads.cinc.sh/files/stable/cinc/ | grep -oP 'href="\d.*/"' | sort -V | tail -n 1 | awk -F '"' '{print  $2 }' | awk -F '/' '{print  "https://downloads.cinc.sh/files/stable/cinc/" $1 "/debian/12/cinc_" $1 "-1_arm64.deb" }') && wget -O ./cinc-client.deb "$url" && dpkg -i ./cinc-client.deb && apt-get install -f -y
 
 WORKDIR /

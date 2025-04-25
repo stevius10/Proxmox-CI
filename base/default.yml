@@ -31,6 +31,12 @@
       when:
         - (config_file.stat.exists and config.proxmox is defined) or (not config_file.stat.exists)
 
+    - name: Ensure Docker compatibility
+      ansible.builtin.file:
+        path: /root/.ssh
+        state: directory
+        mode: '0700'
+
     - name: "Generate keypair"
       community.crypto.openssh_keypair:
         path: "/root/.ssh/{{ id }}"
@@ -38,17 +44,10 @@
         mode: '0600'
         force: false
 
-#    - name: "Set keypair facts"
-#      set_fact:
-#        private_key: "{{ lookup('file', '/root/.ssh/' ~ id) }}"
-#        public_key: "{{ lookup('file', '/root/.ssh/' ~ id ~ '.pub') }}"
-
-#    - name: "Set permissions for public key"
-#      ansible.builtin.file:
-#        path: "/root/.ssh/{{ id }}.pub"
-#        mode: '0644'
-#        owner: root
-#        group: root
+    - name: "Set keypair facts"
+      set_fact:
+        private_key: "{{ lookup('file', '/root/.ssh/' ~ id) }}"
+        public_key: "{{ lookup('file', '/root/.ssh/' ~ id ~ '.pub') }}"
 
     - name: "Check for container"
       community.general.proxmox_vm_info:
@@ -128,7 +127,7 @@
         ostemplate: "{{ os }}"
         cores: "{{ cores }}"
         memory: "{{ memory }}"
-        pubkey: "{{ lookup('file', '/root/.ssh/' ~ id ~ '.pub') | trim }}"
+        pubkey: "{{ public_key | trim }}"
         swap: "{{ swap }}"
         disk: "{{ rootfs }}"
         netif:
@@ -173,7 +172,7 @@
         name: container
         ansible_host: "{{ ip }}"
         ansible_user: "{{ ssh_user }}"
-        ansible_ssh_private_key_file: "/root/.ssh/{{ id }}"
+        ansible_ssh_private_key_file: /root/.ssh/200 # "{{ '/root/.ssh/' ~ id) }}"
         ansible_ssh_common_args: '-o StrictHostKeyChecking=no'
 
     - name: "Reset known_hosts"
@@ -191,3 +190,6 @@
     - name: "Apply base configuration"
       ansible.builtin.include_role:
         name: base
+      vars:
+        private_key: "{{ hostvars['localhost'].private_key }}"
+        public_key: "{{ hostvars['localhost'].public_key }}"
