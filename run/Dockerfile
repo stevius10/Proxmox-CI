@@ -10,7 +10,7 @@ ENV IP=127.0.0.1 \
 STOPSIGNAL SIGRTMIN+3
 
 RUN apt update -y && \
-    apt install -y systemd python3 python3-pip curl ansible wget && \
+    apt install -y systemd python3 python3-pip python3-proxmoxer curl ansible openssh-client wget && \
     apt clean all && \
     apt autoremove -y && \
     rm -rf /var/cache/dnf/* /tmp/* /var/tmp/*

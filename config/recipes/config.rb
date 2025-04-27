@@ -117,16 +117,24 @@ ruby_block 'create_organization' do
   action :run
 end
 
-# ruby_block 'configure_environment' do
-#   block do
-#
-#
-#     all_from_databag.each do |key, value|
-#       next if value.nil? || value.to_s.strip.empty?
-#       Env.set_variable(Chef.run_context.node, key, value)
-#       Env.set_secret(Chef.run_context.node, key, value)
-#       Chef::Log.info("Set: #{key}")
-#     end
-#   end
-#   action :run
-# end
+ruby_block 'configure_environment' do
+  block do
+    %w(proxmox user password email).each do |parent_key|
+      value = node[parent_key]
+      next if value.nil? || value.to_s.strip.empty?
+
+      if value.is_a?(Hash)
+        value.each do |subkey, subvalue|
+          next if subvalue.nil? || subvalue.to_s.strip.empty?
+          combined_key = "#{parent_key}_#{subkey}" # Hier passiert die Magie
+          Env.set_variable(Chef.run_context.node, combined_key, subvalue)
+          Env.set_secret(Chef.run_context.node, combined_key, subvalue)
+        end
+      else
+        Env.set_variable(Chef.run_context.node, parent_key, value)
+        Env.set_secret(Chef.run_context.node, parent_key, value)
+      end
+    end
+  end
+  action :run
+end

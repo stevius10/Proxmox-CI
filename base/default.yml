@@ -26,11 +26,11 @@
       when:
         - (config_file.stat.exists and config.proxmox is defined) or (not config_file.stat.exists)
 
-    - name: Install Proxmoxer for container creation
-      apt:
-        name: python3-proxmoxer
-        state: present
-        install_recommends: false
+    - name: Install Proxmoxer
+      command: apt install python3-proxmoxer -y
+      become: true
+      args:
+        creates: /usr/bin/proxmoxer
 
     - name: Ensure key directory
       ansible.builtin.file:

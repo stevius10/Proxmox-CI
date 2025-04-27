@@ -13,6 +13,7 @@ default['git']['port']['ssh']       = 2222
 default['git']['endpoint']          = "http://localhost:#{node['git']['port']['http']}/api/v1"
 
 default['git']['repo']['branch']    = "main"
+default['git']['repo']['release']   = "release"
 default['git']['repo']['org']       = 'srv'
 default['git']['repo']['ssh']       = "#{node['ip']}:#{node['git']['port']['ssh']}/#{node['git']['repo']['org']}"
 

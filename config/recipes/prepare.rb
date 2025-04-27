@@ -1,11 +1,11 @@
-ruby_block 'information' do
+ruby_block 'environment_info' do
   block do
-    Chef::Log.info("=== ATTRIBUTES ===")
+    Chef::Log.info("Node Attributes: ")
     node&.each do |key, value|
       Chef::Log.info("ATTR #{key}=#{value}")
     end
 
-    Chef::Log.info("=== DATABAG JSON (-j übergeben) ===")
+    Chef::Log.info("Databag Attributes: ")
     node.override_attrs&.each do |key, value|
       Chef::Log.info("DATA #{key}=#{value}")
     end
@@ -34,6 +34,6 @@ end
   end
 end
 
-package %w(git acl python3-pip python3-dev build-essential libssl-dev lsb-release nodejs npm) do
+package %w(git acl python3-pip python3-dev python3-proxmoxer build-essential libssl-dev lsb-release nodejs npm) do
   action :install
 end
