@@ -34,6 +34,6 @@ end
   end
 end
 
-package %w(git acl python3-pip python3-dev python3-proxmoxer build-essential libssl-dev lsb-release nodejs npm) do
+package %w(git acl python3-pip nodejs npm) do
   action :install
 end

@@ -3,7 +3,7 @@
   hosts: localhost
   gather_facts: no
   vars:
-    os: "local:vztmpl/debian-12-standard_12.7-1_amd64.tar.zst"
+    os: "local:vztmpl/centos-9-stream-default_20240828_amd64.tar.xz"
     ssh_keys_dir: "/share/.ssh"
   tasks:
     - name: Check configuration
@@ -19,18 +19,22 @@
 
     - name: Set connection configuration
       ansible.builtin.set_fact:
-        PROXMOX_HOST: "{{ config.proxmox.host | default(lookup('env', 'PROXMOX_HOST')) }}"
-        PROXMOX_USER: "{{ config.proxmox.user | default(lookup('env', 'PROXMOX_USER')) }}"
-        PROXMOX_TOKEN_ID: "{{ config.proxmox.token | default(lookup('env', 'PROXMOX_TOKEN_ID')) }}"
-        PROXMOX_TOKEN_SECRET: "{{ config.proxmox.secret | default(lookup('env', 'PROXMOX_TOKEN_SECRET')) }}"
+        PROXMOX_HOST: "{{ lookup('env', 'PROXMOX_HOST') }}"
+        PROXMOX_USER: "{{ lookup('env', 'PROXMOX_USER') }}"
+        PROXMOX_TOKEN: "{{ lookup('env', 'PROXMOX_TOKEN') }}"
+        PROXMOX_SECRET: "{{ lookup('env', 'PROXMOX_SECRET') }}"
       when:
         - (config_file.stat.exists and config.proxmox is defined) or (not config_file.stat.exists)
 
-    - name: Install Proxmoxer
-      command: apt install python3-proxmoxer -y
-      become: true
-      args:
-        creates: /usr/bin/proxmoxer
+    - name: Debug Proxmox connection variables
+      ansible.builtin.debug:
+        msg:
+          PROXMOX_HOST: "{{ PROXMOX_HOST | default('') }}"
+          PROXMOX_USER: "{{ PROXMOX_USER | default('') }}"
+          PROXMOX_TOKEN: "{{ PROXMOX_TOKEN | default('') }}"
+          PROXMOX_SECRET: "{{ PROXMOX_SECRET | default('') }}"
+      when:
+        - (config_file.stat.exists and config.proxmox is defined) or (not config_file.stat.exists)
 
     - name: Ensure key directory
       ansible.builtin.file:
@@ -48,11 +52,11 @@
       tags: base
 
     - name: Check container exists
-      community.general.proxmox_vm_info:
+      community.proxmox.proxmox_vm_info:
         api_host: "{{ PROXMOX_HOST }}"
         api_user: "{{ PROXMOX_USER }}"
-        api_token_id: "{{ PROXMOX_TOKEN_ID }}"
-        api_token_secret: "{{ PROXMOX_TOKEN_SECRET }}"
+        api_token_id: "{{ PROXMOX_TOKEN }}"
+        api_token_secret: "{{ PROXMOX_SECRET }}"
         api_port: 8006
         node: "pve"
         vmid: "{{ id }}"
@@ -65,11 +69,11 @@
         container_exists: "{{ container_info is success and (container_info.proxmox_vms | length) > 0 }}"
 
     - name: Stop container
-      community.general.proxmox:
+      community.proxmox.proxmox:
         api_host: "{{ PROXMOX_HOST }}"
         api_user: "{{ PROXMOX_USER }}"
-        api_token_id: "{{ PROXMOX_TOKEN_ID }}"
-        api_token_secret: "{{ PROXMOX_TOKEN_SECRET }}"
+        api_token_id: "{{ PROXMOX_TOKEN }}"
+        api_token_secret: "{{ PROXMOX_SECRET }}"
         api_port: 8006
         vmid: "{{ id }}"
         node: "pve"
@@ -80,11 +84,11 @@
       when: container_exists and (terminate | bool == true)
 
     - name: Remove container
-      community.general.proxmox:
+      community.proxmox.proxmox:
         api_host: "{{ PROXMOX_HOST }}"
         api_user: "{{ PROXMOX_USER }}"
-        api_token_id: "{{ PROXMOX_TOKEN_ID }}"
-        api_token_secret: "{{ PROXMOX_TOKEN_SECRET }}"
+        api_token_id: "{{ PROXMOX_TOKEN }}"
+        api_token_secret: "{{ PROXMOX_SECRET }}"
         api_port: 8006
         vmid: "{{ id }}"
         node: "pve"
@@ -113,11 +117,11 @@
         - (mount | trim | length) > 0
 
     - name: Create container
-      community.general.proxmox:
+      community.proxmox.proxmox:
         api_host: "{{ PROXMOX_HOST }}"
         api_user: "{{ PROXMOX_USER }}"
-        api_token_id: "{{ PROXMOX_TOKEN_ID }}"
-        api_token_secret: "{{ PROXMOX_TOKEN_SECRET }}"
+        api_token_id: "{{ PROXMOX_TOKEN }}"
+        api_token_secret: "{{ PROXMOX_SECRET }}"
         api_port: 8006
         vmid: "{{ id }}"
         node: "pve"
@@ -128,6 +132,7 @@
         pubkey: "{{ lookup('file', [ssh_keys_dir, id ~ '.pub'] | path_join) }}"
         swap: "{{ swap }}"
         disk: "{{ rootfs }}"
+        storage: "local-lvm"
         netif:
           net0: "name=eth0,gw=192.168.178.1,ip={{ ip }}/24,bridge=vmbr0"
         mounts: "{{ mounts | default({}) }}"
@@ -136,11 +141,11 @@
       delegate_to: localhost
 
     - name: Start container
-      community.general.proxmox:
+      community.proxmox.proxmox:
         api_host: "{{ PROXMOX_HOST }}"
         api_user: "{{ PROXMOX_USER }}"
-        api_token_id: "{{ PROXMOX_TOKEN_ID }}"
-        api_token_secret: "{{ PROXMOX_TOKEN_SECRET }}"
+        api_token_id: "{{ PROXMOX_TOKEN }}"
+        api_token_secret: "{{ PROXMOX_SECRET }}"
         api_port: 8006
         vmid: "{{ id }}"
         node: "pve"
@@ -151,7 +156,7 @@
       wait_for:
         port: 22
         host: "{{ ip }}"
-        timeout: 60
+        timeout: 120
       delegate_to: localhost
 
     - name: Test user already configured

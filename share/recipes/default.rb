@@ -1,5 +1,7 @@
-package 'samba' do
-  action :install
+%w[samba samba-common samba-client].each do |pkg|
+  package pkg do
+    action :install
+  end
 end
 
 node['mount'].each do |name, config|
@@ -19,9 +21,9 @@ template '/etc/samba/smb.conf' do
   variables(
     share: node['mount']
   )
-  notifies :restart, 'service[smbd]'
+  notifies :restart, 'service[smb]'
 end
 
-service 'smbd' do
+service 'smb' do
   action [:enable, :start]
 end

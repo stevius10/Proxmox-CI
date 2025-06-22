@@ -15,7 +15,7 @@ The architecture is based on a self-replicating pipeline.
 </p>
 
 ### Provisioning & Configuration
-- Ansible (`base/default.yml`) interacts with the Proxmox API using the `community.general.proxmox` collection to create containers using reproducible configuration via the `base/roles/base` role and installs configuration management.
+- Ansible (`base/default.yml`) interacts with the Proxmox API using the `community.proxmox` collection to create containers using reproducible configuration via the `base` role and installs configuration management.
 - Chef/Cinc (code in `config/` and `share/`) is executed inside the container to manage application-level configuration.
 
 ### Self-Replication
