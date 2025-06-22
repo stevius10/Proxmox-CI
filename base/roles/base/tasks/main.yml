@@ -1,15 +1,16 @@
 - name: Basic system configuration
   block:
   - name: Update system
-    dnf:
-      name: '*'
-      state: latest
+    apt:
       update_cache: true
+      upgrade: full
+      cache_valid_time: 3600
+      autoclean: true
+      autoremove: true
 
   - name: Install default applications
-    dnf:
+    apt:
       name: "{{ default_packages }}"
-      validate_certs: false
       state: present
 
   - name: Create standard users
@@ -51,13 +52,13 @@
 
   - name: Download
     ansible.builtin.get_url:
-      url: "https://downloads.cinc.sh/files/stable/cinc/{{ cinc_version }}/rocky/9/cinc-{{ cinc_version }}-1.rocky9.{{ arch | default('x86_64') }}.rpm"
-      dest: /tmp/cinc.rpm
+      url: "https://downloads.cinc.sh/files/stable/cinc/{{ cinc_version }}/debian/12/cinc_{{ cinc_version }}-1_{{ arch | default('amd64') }}.deb"
+      dest: /tmp/cinc.deb
+      validate_certs: no
 
   - name: Install Cinc
-    ansible.builtin.dnf:
-      name: /tmp/cinc.rpm
-      disable_gpg_check: true
+    ansible.builtin.apt:
+      deb: /tmp/cinc.deb
       state: present
 
 - name: SSH Configuration

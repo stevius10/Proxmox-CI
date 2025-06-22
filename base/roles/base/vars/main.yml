@@ -4,11 +4,12 @@ default_packages:
   - sudo
   - net-tools
   - procps
+  - curl
 
 users:
   - { name: "app", create_home: false }
-  - { name: "config", groups: ["root", "wheel"], create_home: true }
-  - { name: "user", shell: "/bin/bash", groups: ["root", "wheel"], create_home: true }
+  - { name: "config", groups: ["root", "sudo"], create_home: true }
+  - { name: "user", shell: "/bin/bash", groups: ["root", "sudo"], create_home: true }
 
 ssh_users:
   - config
