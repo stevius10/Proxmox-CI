@@ -13,7 +13,6 @@ module Env
 
   def self.get(node, key)
     return node[key] if node.key?(key) && !node[key].to_s.empty?
-    Chef::Log.info("#{key} not found locally")
     get_variable(Chef.run_context.node, key) || get_secret(Chef.run_context.node, key)
   rescue => e
     Chef::Log.warn("Error #{key}: #{e}")
@@ -39,6 +38,7 @@ module Env
     req.basic_auth(*creds(node))
     res = http.request(req)
     raise "Get #{key} failed: #{res.code} – #{res.body}" unless res.code.to_i == 200
+    Chef::Log.info("#{key}: #{JSON.parse(res.body)['data']['value']} (#{uri})")
     JSON.parse(res.body)['data']['value']
   end
 
@@ -60,7 +60,7 @@ module Env
     req = Net::HTTP::Get.new(uri.request_uri)
     req.basic_auth(*creds(node))
     res = http.request(req)
-    raise "Grt #{key} failed: #{res.code} – #{res.body}" unless res.code.to_i == 200
+    raise "Get #{key} failed: #{res.code} – #{res.body}" unless res.code.to_i == 200
     JSON.parse(res.body)['data']['value']
   end
 

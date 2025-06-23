@@ -13,7 +13,7 @@ jobs:
       cores: ${{ steps.config.outputs.cores }}
       memory: ${{ steps.config.outputs.memory }}
       swap: ${{ steps.config.outputs.swap }}
-      rootfs: ${{ steps.config.outputs.rootfs }}
+      disk: ${{ steps.config.outputs.disk }}
       boot: ${{ steps.config.outputs.boot }}
       mount: ${{ steps.config.outputs.mount }}
       terminate: ${{ steps.config.outputs.terminate }}
@@ -31,7 +31,7 @@ jobs:
           echo "cores=$CORES" >> $GITEA_OUTPUT
           echo "memory=$MEMORY" >> $GITEA_OUTPUT
           echo "swap=$SWAP" >> $GITEA_OUTPUT
-          echo "rootfs=$ROOTFS" >> $GITEA_OUTPUT
+          echo "disk=$DISK" >> $GITEA_OUTPUT
           echo "boot=$BOOT" >> $GITEA_OUTPUT
           echo "mount=$MOUNT" >> $GITEA_OUTPUT
           echo "terminate=$TERMINATE" >> $GITEA_OUTPUT
@@ -49,7 +49,7 @@ jobs:
           cores: ${{ needs.init.outputs.cores }}
           memory: ${{ needs.init.outputs.memory }}
           swap: ${{ needs.init.outputs.swap }}
-          rootfs: ${{ needs.init.outputs.rootfs }}
+          disk: ${{ needs.init.outputs.disk }}
           boot: ${{ needs.init.outputs.boot }}
           mount: ${{ needs.init.outputs.mount }}
           terminate: ${{ needs.init.outputs.terminate }}
@@ -62,7 +62,7 @@ jobs:
       - name: Checkout repository
         uses: https://gitea.com/actions/checkout@v4
       - name: Configure container
-        run: tar cz . | sudo ssh -o StrictHostKeyChecking=no -i /root/.ssh/${{ needs.init.outputs.id }} config@${{ needs.init.outputs.ip }} 'tar xz -C ~ && sudo env IP=${{ needs.init.outputs.ip }} MOUNT=${{ needs.init.outputs.mount }} cinc-client -l debug --local-mode --chef-license accept --config-option cookbook_path=. -o share'
+        run: tar cz . | sudo ssh -o StrictHostKeyChecking=no -i /share/.ssh/${{ needs.init.outputs.id }} config@${{ needs.init.outputs.ip }} 'tar xz -C ~ && sudo env IP=${{ needs.init.outputs.ip }} MOUNT=${{ needs.init.outputs.mount }} cinc-client -l debug --local-mode --chef-license accept --config-option cookbook_path=. -o share'
 
   config:
     runs-on: [ "shell" ]
@@ -71,4 +71,4 @@ jobs:
       - name: Checkout repository
         uses: https://gitea.com/actions/checkout@v4
       - name: Configure container
-        run: tar cz . | sudo ssh -o StrictHostKeyChecking=no -i /root/.ssh/${{ needs.init.outputs.id }} config@${{ needs.init.outputs.ip }} 'tar xz -C ~ && sudo env IP=${{ needs.init.outputs.ip }} PWD=$(pwd) cinc-client -l info --local-mode --chef-license accept --config-option cookbook_path=. -o config'
+        run: tar cz . | sudo ssh -o StrictHostKeyChecking=no -i /share/.ssh/${{ needs.init.outputs.id }} config@${{ needs.init.outputs.ip }} 'tar xz -C ~ && sudo env IP=${{ needs.init.outputs.ip }} PWD=$(pwd) cinc-client -l info --local-mode -j run/config.json --chef-license accept --config-option cookbook_path=. -o config'

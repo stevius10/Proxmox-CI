@@ -1,7 +1,7 @@
 default['ip']                       = "#{ENV['IP']}"
 
-default['git']['app']['user']       = 'app'
-default['git']['app']['group']      = 'app'
+default['git']['app']['user']       = 'config' # 'app'
+default['git']['app']['group']      = 'config' # 'app'
 
 default['git']['install_dir']       = '/app/git'
 default['git']['data_dir']          = '/app/git/data'
